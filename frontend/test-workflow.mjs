@@ -93,8 +93,27 @@ async function runTest() {
   if (p5SecondErr) throw new Error('Player 5 join failed after seat freed: ' + p5SecondErr.message);
   console.log(`   ✓ Player 5 joined successfully into freed Seat ${p5SecondJoin.player.seat_number}!`);
 
-  // 9. Abuse test: Name validation
-  console.log('8. Testing display name sanitization (empty name)...');
+  // 9. Host ends the game for all players
+  console.log('8. Host ends the game (leave_room as host)...');
+  const { data: hostLeaveData, error: hostLeaveErr } = await p1.client.rpc('leave_room', {
+    p_room_id: roomId
+  });
+  if (hostLeaveErr) throw hostLeaveErr;
+  console.log(`   ✓ Host ended game: was_host=${hostLeaveData.was_host}`);
+
+  // Verify room is abandoned and players removed
+  const { data: roomCheck } = await p1.client.from('rooms').select('*').eq('id', roomId).single();
+  if (roomCheck.status !== 'abandoned') {
+    throw new Error(`Expected room status 'abandoned', got '${roomCheck.status}'`);
+  }
+  const { data: remainingPlayers } = await p1.client.from('room_players').select('*').eq('room_id', roomId);
+  if (remainingPlayers.length !== 0) {
+    throw new Error(`Expected 0 remaining players after host ended game, got ${remainingPlayers.length}`);
+  }
+  console.log('   ✓ Room status is abandoned and all player records cleared.');
+
+  // 10. Abuse test: Name validation
+  console.log('9. Testing display name sanitization (empty name)...');
   const { error: badNameErr } = await p1.client.rpc('join_room', {
     p_room_id: roomId,
     p_display_name: '   '

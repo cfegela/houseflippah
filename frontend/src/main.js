@@ -1,4 +1,5 @@
 import './style.css';
+import QRCode from 'qrcode';
 import {
   ensureAnonymousSession,
   createRoom,
@@ -38,9 +39,12 @@ const joinPlayerName = document.getElementById('join-player-name');
 const btnJoinGame = document.getElementById('btn-join-game');
 
 // DOM Elements - Lobby
-const roomBanner = document.getElementById('room-banner');
-const lobbyRoomId = document.getElementById('lobby-room-id');
+const hostInviteControls = document.getElementById('host-invite-controls');
 const btnCopyLink = document.getElementById('btn-copy-link');
+const btnShowQr = document.getElementById('btn-show-qr');
+const qrModal = document.getElementById('qr-modal');
+const qrCanvas = document.getElementById('qr-canvas');
+const btnCloseQr = document.getElementById('btn-close-qr');
 const playerCountEl = document.getElementById('player-count');
 const seatsGrid = document.getElementById('seats-grid');
 
@@ -136,7 +140,7 @@ function renderSeats() {
   // Update button states and host-only elements
   if (myPlayer) {
     if (myPlayer.is_host) {
-      roomBanner.classList.remove('hidden');
+      if (hostInviteControls) hostInviteControls.classList.remove('hidden');
       btnLeaveRoom.classList.remove('hidden');
       btnStartGame.classList.remove('hidden');
       if (lobbyWaitMsg) lobbyWaitMsg.classList.add('hidden');
@@ -146,7 +150,7 @@ function renderSeats() {
         ? 'Start Game'
         : 'Waiting for players to join (2-4 players needed)';
     } else {
-      roomBanner.classList.add('hidden');
+      if (hostInviteControls) hostInviteControls.classList.add('hidden');
       btnLeaveRoom.classList.add('hidden');
       btnStartGame.classList.add('hidden');
       if (lobbyWaitMsg) lobbyWaitMsg.classList.remove('hidden');
@@ -163,7 +167,6 @@ function showLobbyView(room, players) {
   landingView.classList.add('hidden');
   lobbyView.classList.remove('hidden');
 
-  lobbyRoomId.textContent = room.id;
   setRoomUrl(room.id);
 
   renderSeats();
@@ -175,11 +178,17 @@ function showLobbyView(room, players) {
     room.id,
     async () => {
       try {
-        const { players: updatedPlayers } = await fetchRoom(room.id);
+        const { room: latestRoom, players: updatedPlayers } = await fetchRoom(room.id);
+        if (latestRoom.status === 'abandoned') {
+          showLandingView();
+          showAlert('The game was ended by the host.', 'info');
+          return;
+        }
         currentPlayers = updatedPlayers;
         renderSeats();
       } catch (err) {
-        console.error('Error refreshing players:', err);
+        showLandingView();
+        showAlert('The game was ended by the host.', 'info');
       }
     },
     (roomChange) => {
@@ -188,8 +197,8 @@ function showLobbyView(room, players) {
         if (currentRoom.status === 'in_progress') {
           showAlert('Game has started!', 'info');
         } else if (currentRoom.status === 'abandoned') {
-          showAlert('The host has ended the game.', 'info');
           showLandingView();
+          showAlert('The game was ended by the host.', 'info');
         }
       }
     }
@@ -205,6 +214,7 @@ function showLandingView() {
   currentRoom = null;
   currentPlayers = [];
   setRoomUrl(null);
+  closeQrModal();
 
   document.getElementById('app').classList.remove('in-lobby');
   lobbyView.classList.add('hidden');
@@ -306,7 +316,7 @@ btnCopyLink.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(inviteUrl);
     const originalText = btnCopyLink.textContent;
-    btnCopyLink.textContent = '✓ Copied!';
+    btnCopyLink.textContent = 'Copied!';
     setTimeout(() => {
       btnCopyLink.textContent = originalText;
     }, 2000);
@@ -315,16 +325,50 @@ btnCopyLink.addEventListener('click', async () => {
   }
 });
 
+// --- QR Code Modal Flow ---
+function openQrModal() {
+  if (!currentRoom) return;
+  const inviteUrl = `${window.location.origin}${window.location.pathname}?room=${currentRoom.id}`;
+  QRCode.toCanvas(
+    qrCanvas,
+    inviteUrl,
+    {
+      width: 230,
+      margin: 1,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff',
+      },
+    },
+    (err) => {
+      if (err) console.error('Failed to generate QR code:', err);
+    }
+  );
+  qrModal.classList.remove('hidden');
+}
+
+function closeQrModal() {
+  qrModal.classList.add('hidden');
+}
+
+btnShowQr.addEventListener('click', openQrModal);
+btnCloseQr.addEventListener('click', closeQrModal);
+qrModal.addEventListener('click', (e) => {
+  if (e.target === qrModal) closeQrModal();
+});
+
 
 
 btnLeaveRoom.addEventListener('click', async () => {
   if (!currentRoom) return;
+  const wasRoomId = currentRoom.id;
   try {
-    await leaveRoom(currentRoom.id);
+    await leaveRoom(wasRoomId);
   } catch (err) {
     console.error('Error leaving room:', err);
   }
   showLandingView();
+  showAlert('You ended the game.', 'info');
 });
 
 btnStartGame.addEventListener('click', () => {
