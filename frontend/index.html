@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>houseflippah — Online Multiplayer</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <div class="logo-wrapper">
+          <img
+            src="/houseflippah-logo.svg"
+            alt="houseflippah logo"
+            class="hero-logo"
+          />
+        </div>
+      </header>
+
+      <!-- Alert Notification Area -->
+      <div id="alert-box" class="alert alert-error hidden">
+        <span id="alert-msg"></span>
+        <button id="alert-close" class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;">✕</button>
+      </div>
+
+      <!-- VIEW 1: LANDING / HOME -->
+      <main id="landing-view">
+        <!-- Host Game Card (Default Homepage View) -->
+        <div id="host-card" class="card" style="max-width: 500px; margin: 0 auto; text-align: center;">
+          <h2 style="margin-bottom: 0.75rem; font-size: 1.6rem;">Host a Game</h2>
+          <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 1.75rem; line-height: 1.5;">
+            Start a fresh 4-player game and get a link to share with friends. No account or login required.
+          </p>
+          <button id="btn-open-host-prompt" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1.05rem;">
+            Start New Game
+          </button>
+        </div>
+
+        <!-- Join Game Card (Shown when an invite link ?room=UUID is opened) -->
+        <div id="join-card" class="card hidden" style="max-width: 500px; margin: 0 auto; text-align: center;">
+          <h2 style="margin-bottom: 0.5rem; font-size: 1.6rem;">Join Game</h2>
+          <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.5;">
+            You've been invited to join an online game of <strong>houseflippah</strong>!
+          </p>
+          <div class="form-group" style="text-align: left;">
+            <label for="join-player-name">Your Username</label>
+            <input
+              type="text"
+              id="join-player-name"
+              placeholder="Enter your username (e.g. InvestorBob)"
+              maxlength="20"
+              autocomplete="off"
+            />
+          </div>
+          <button id="btn-join-game" class="btn btn-success" style="width: 100%; padding: 0.85rem; font-size: 1.05rem;">
+            Join Room
+          </button>
+        </div>
+      </main>
+
+      <!-- Host Username Modal -->
+      <div id="host-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <div>
+            <h3 style="font-size: 1.3rem; margin-bottom: 0.35rem;">Enter Your Username</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              Choose a username to host the game.
+            </p>
+          </div>
+          <div class="form-group">
+            <label for="host-player-name">Username</label>
+            <input
+              type="text"
+              id="host-player-name"
+              placeholder="e.g. InvestorBob"
+              maxlength="20"
+              autocomplete="off"
+            />
+          </div>
+          <div class="actions-row" style="justify-content: flex-end;">
+            <button id="btn-cancel-host" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button id="btn-confirm-create-room" class="btn btn-primary">
+              Start Game
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: GAME LOBBY -->
+      <main id="lobby-view" class="hidden">
+        <div id="room-banner" class="room-banner hidden">
+          <div class="room-id-box">
+            <span style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted);">Invite Link & Room ID</span>
+            <span id="lobby-room-id" class="room-id-value"></span>
+          </div>
+          <button id="btn-copy-link" class="btn btn-secondary">
+            📋 Copy Invite Link
+          </button>
+        </div>
+
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2>Lobby (<span id="player-count">0</span>/4 Players)</h2>
+          </div>
+
+          <!-- Seats Grid (Seats 1-4) -->
+          <div class="seats-grid" id="seats-grid">
+            <!-- Dynamically populated seats -->
+          </div>
+
+          <!-- Lobby Action Buttons -->
+          <div class="actions-row" style="margin-top: 1.5rem; justify-content: space-between; align-items: center;">
+            <button id="btn-leave-room" class="btn btn-danger hidden">
+              End Game
+            </button>
+            <div style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto;">
+              <span id="lobby-wait-msg" class="hidden" style="color: var(--text-muted); font-size: 0.9rem;">
+                Waiting for host to start the game...
+              </span>
+              <button id="btn-start-game" class="btn btn-primary hidden" disabled>
+                Start Game
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
