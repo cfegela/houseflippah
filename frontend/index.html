@@ -145,6 +145,66 @@
           </div>
         </div>
       </main>
+
+      <!-- VIEW 3: ACTIVE GAME (Zillow Real Estate & Banking) -->
+      <main id="game-view" class="hidden">
+        <!-- Turn & Banking HUD -->
+        <div class="card game-hud">
+          <div class="hud-top-row">
+            <div class="turn-indicator-box" id="turn-indicator-box">
+              <span class="hud-label">Current Turn</span>
+              <div class="turn-player-name" id="turn-player-display">Loading...</div>
+            </div>
+
+            <div class="wallet-box">
+              <span class="hud-label">Your Wallet</span>
+              <div class="wallet-amount" id="my-wallet-display">$100</div>
+            </div>
+
+            <div class="hud-actions">
+              <button id="btn-end-turn" class="btn btn-primary" disabled>
+                End Turn
+              </button>
+              <button id="btn-game-end" class="btn btn-danger hidden">
+                End Game
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Players Scoreboard Strip -->
+          <div class="players-scoreboard" id="players-scoreboard">
+            <!-- Dynamic scoreboard pills -->
+          </div>
+        </div>
+
+        <!-- Zillow Real Estate Marketplace -->
+        <section class="marketplace-section">
+          <div class="marketplace-header">
+            <div>
+              <h2>Bank Real Estate Listings</h2>
+              <p style="color: var(--text-muted); font-size: 0.9rem;">
+                Browse properties and purchase bank-owned deeds on your turn.
+              </p>
+            </div>
+          </div>
+
+          <!-- Search Controls -->
+          <div class="filter-bar">
+            <input
+              type="text"
+              id="prop-search-input"
+              placeholder="Search by street name (e.g. Boardwalk, Oriental)..."
+              class="search-input"
+              autocomplete="off"
+            />
+          </div>
+
+          <!-- Properties Feed (Zillow Style) -->
+          <div class="properties-grid" id="properties-grid">
+            <!-- Dynamically populated property cards -->
+          </div>
+        </section>
+      </main>
     </div>
 
     <script type="module" src="/src/main.js"></script>

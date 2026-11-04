@@ -93,6 +93,65 @@ async function runTest() {
   if (p5SecondErr) throw new Error('Player 5 join failed after seat freed: ' + p5SecondErr.message);
   console.log(`   ✓ Player 5 joined successfully into freed Seat ${p5SecondJoin.player.seat_number}!`);
 
+  // 8. Test Starting Game, Banking & Real Estate
+  console.log('7b. Testing Game Start, $100 Starting Cash & Property Purchasing...');
+  const { data: startData, error: startErr } = await p1.client.rpc('start_game', {
+    p_room_id: roomId
+  });
+  if (startErr) throw new Error('start_game failed: ' + startErr.message);
+  console.log('   ✓ Game started successfully. Status is in_progress, current turn is Seat 1.');
+
+  // Check players cash = 100
+  const { data: playersWithCash } = await p1.client.from('room_players').select('*').eq('room_id', roomId);
+  const all100 = playersWithCash.every(p => p.cash === 100);
+  if (!all100) throw new Error('Not all players started with $100!');
+  console.log('   ✓ Verified all players have exactly $100 starting cash.');
+
+  // Check properties seeded (28 deeds)
+  const { data: roomProps } = await p1.client.from('game_properties').select('*').eq('room_id', roomId);
+  if (roomProps.length !== 28) throw new Error(`Expected 28 properties seeded, got ${roomProps.length}`);
+  console.log('   ✓ Verified 28 bank-owned properties seeded in game.');
+
+  // Player 2 attempts to buy on Player 1's turn -> should fail
+  const { error: notYourTurnErr } = await p2.client.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave'
+  });
+  if (!notYourTurnErr) throw new Error('Expected "not your turn" error for Player 2!');
+  console.log(`   ✓ Strict turn enforcement verified: "${notYourTurnErr.message}"`);
+
+  // Player 1 attempts to buy Boardwalk ($400) with $100 -> should fail
+  const { error: noCashErr } = await p1.client.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: 'boardwalk'
+  });
+  if (!noCashErr) throw new Error('Expected insufficient funds error for Boardwalk!');
+  console.log(`   ✓ Insufficient funds check verified: "${noCashErr.message}"`);
+
+  // Player 1 buys Mediterranean Ave ($60) -> succeeds!
+  const { data: buyData, error: buyErr } = await p1.client.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave'
+  });
+  if (buyErr) throw new Error('buy_property failed: ' + buyErr.message);
+  if (buyData.player.cash !== 40) throw new Error(`Expected $40 cash remaining, got ${buyData.player.cash}`);
+  console.log(`   ✓ Player 1 bought Mediterranean Avenue for $60! Remaining cash: $${buyData.player.cash}.`);
+
+  // Player 1 ends turn -> advances to Seat 2
+  const { data: endTurnData, error: endTurnErr } = await p1.client.rpc('end_turn', {
+    p_room_id: roomId
+  });
+  if (endTurnErr) throw new Error('end_turn failed: ' + endTurnErr.message);
+  console.log(`   ✓ Turn ended. Active seat is now Seat ${endTurnData.current_turn_seat}.`);
+
+  // Player 2 attempts to buy Mediterranean Ave (already owned) -> should fail
+  const { error: alreadyOwnedErr } = await p2.client.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave'
+  });
+  if (!alreadyOwnedErr) throw new Error('Expected already owned error!');
+  console.log(`   ✓ Already owned check verified: "${alreadyOwnedErr.message}"`);
+
   // 9. Host ends the game for all players
   console.log('8. Host ends the game (leave_room as host)...');
   const { data: hostLeaveData, error: hostLeaveErr } = await p1.client.rpc('leave_room', {

@@ -81,6 +81,67 @@ export async function toggleReady(roomId) {
 }
 
 /**
+ * Start the game (Host only).
+ */
+export async function startGame(roomId) {
+  const { data, error } = await supabase.rpc('start_game', {
+    p_room_id: roomId,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Buy a property from the bank.
+ */
+export async function buyProperty(roomId, propertySlug) {
+  const { data, error } = await supabase.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: propertySlug,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * End active player turn and advance to the next player.
+ */
+export async function endTurn(roomId) {
+  const { data, error } = await supabase.rpc('end_turn', {
+    p_room_id: roomId,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Fetch full game data (room, players, catalog, and room property instances).
+ */
+export async function fetchGameData(roomId) {
+  const [roomRes, playersRes, catalogRes, gamePropsRes] = await Promise.all([
+    supabase.from('rooms').select('*').eq('id', roomId).single(),
+    supabase.from('room_players').select('*').eq('room_id', roomId).order('seat_number', { ascending: true }),
+    supabase.from('catalog_properties').select('*').order('board_position', { ascending: true }),
+    supabase.from('game_properties').select('*').eq('room_id', roomId),
+  ]);
+
+  if (roomRes.error) throw roomRes.error;
+  if (playersRes.error) throw playersRes.error;
+  if (catalogRes.error) throw catalogRes.error;
+  if (gamePropsRes.error) throw gamePropsRes.error;
+
+  return {
+    room: roomRes.data,
+    players: playersRes.data || [],
+    catalog: catalogRes.data || [],
+    gameProperties: gamePropsRes.data || [],
+  };
+}
+
+/**
  * Leave a room.
  */
 export async function leaveRoom(roomId) {
@@ -93,9 +154,9 @@ export async function leaveRoom(roomId) {
 }
 
 /**
- * Subscribe to realtime table changes for players and room state.
+ * Subscribe to realtime table changes for players, room state, and game properties.
  */
-export function subscribeToRoom(roomId, onPlayersChange, onRoomChange) {
+export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropertiesChange) {
   const channel = supabase.channel(`room:${roomId}`)
     .on(
       'postgres_changes',
@@ -119,6 +180,18 @@ export function subscribeToRoom(roomId, onPlayersChange, onRoomChange) {
       },
       (payload) => {
         onRoomChange(payload);
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'game_properties',
+        filter: `room_id=eq.${roomId}`,
+      },
+      (payload) => {
+        if (onPropertiesChange) onPropertiesChange(payload);
       }
     )
     .subscribe();
