@@ -124,6 +124,44 @@
         </div>
       </div>
 
+      <!-- Purchase Confirmation Modal -->
+      <div id="purchase-confirm-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 480px; text-align: left;">
+          <div style="margin-bottom: 0.75rem;">
+            <h3 style="font-size: 1.35rem; font-weight: 800; margin: 0;">Confirm Purchase</h3>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.25rem;">
+            Confirm purchasing <strong id="modal-property-name" style="color: var(--text-main);">Property</strong> with 10% down financing:
+          </p>
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.92rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Total Property Value</span>
+              <strong id="modal-prop-total-cost" style="color: var(--text-main);">$0</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Required Down Payment (10%)</span>
+              <strong id="modal-prop-down-payment" style="color: #22c55e;">$0</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Mortgage per Round (2.5%)</span>
+              <strong id="modal-prop-mortgage" style="color: #38bdf8;">$0 / round</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 0.6rem; margin-top: 0.2rem;">
+              <span style="color: var(--text-muted);">Your Cash After Purchase</span>
+              <strong id="modal-prop-remaining-cash" style="color: var(--text-main);">$0</strong>
+            </div>
+          </div>
+          <div class="actions-row" style="justify-content: flex-end; gap: 0.75rem;">
+            <button id="btn-cancel-purchase" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button id="btn-confirm-purchase" class="btn btn-primary" style="background: linear-gradient(135deg, #16a34a, #15803d); min-width: 160px;">
+              Confirm Purchase
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- VIEW 2: GAME LOBBY -->
       <main id="lobby-view" class="hidden">
         <div class="card">
@@ -163,29 +201,29 @@
 
       <!-- VIEW 3: ACTIVE GAME (Zillow Real Estate & Banking) -->
       <main id="game-view" class="hidden">
-        <!-- Turn & Banking HUD -->
-        <div class="card game-hud">
-          <div class="hud-top-row">
-            <div class="turn-indicator-box" id="turn-indicator-box">
-              <span class="hud-label">Round <span id="round-number-display">1</span> • Current Turn</span>
-              <div class="turn-player-name" id="turn-player-display">Loading...</div>
-            </div>
-
-            <div class="wallet-box">
-              <span class="hud-label">Bank Account</span>
-              <div class="wallet-amount" id="my-wallet-display">$100,000</div>
-            </div>
-
-            <div class="hud-actions">
-              <button id="btn-end-turn" class="btn btn-primary" disabled>
-                End Turn
-              </button>
-            </div>
-          </div>
-        </div>
-
         <!-- SUBPAGE 1: GAME DASHBOARD (6 Cards) -->
         <section id="game-dashboard-view" class="game-dashboard-section">
+          <!-- Turn & Banking HUD (Main Landing Page Only) -->
+          <div class="card game-hud">
+            <div class="hud-top-row">
+              <div class="turn-indicator-box" id="turn-indicator-box">
+                <span class="hud-label">Round <span id="round-number-display">1</span> • Current Turn</span>
+                <div class="turn-player-name" id="turn-player-display">Loading...</div>
+              </div>
+
+              <div class="wallet-box">
+                <span class="hud-label">Bank Account</span>
+                <div class="wallet-amount" id="my-wallet-display">$100,000</div>
+              </div>
+
+              <div class="hud-actions">
+                <button id="btn-end-turn" class="btn btn-primary" disabled>
+                  End Turn
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="dashboard-grid">
             <!-- 1. Buy Properties -->
             <div class="dashboard-card" id="card-nav-buy-properties" role="button" tabindex="0">
@@ -267,6 +305,13 @@
           <!-- Properties Feed (Zillow Style) -->
           <div class="properties-grid" id="properties-grid">
             <!-- Dynamically populated property cards -->
+          </div>
+        </section>
+
+        <!-- SUBPAGE 2B: PROPERTY DETAILS VIEW -->
+        <section id="game-property-details-view" class="subpage-section hidden">
+          <div id="property-details-container" class="property-details-container">
+            <!-- Dynamically populated property detail view -->
           </div>
         </section>
 
