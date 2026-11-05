@@ -384,26 +384,40 @@ function renderGameHUD() {
 function renderProperties() {
   propertiesGrid.innerHTML = '';
 
-  catalogProperties.forEach((prop) => {
+  const availableProperties = catalogProperties.filter((prop) => {
     const gp = gameProperties.find((g) => g.property_slug === prop.slug);
-    const ownerId = gp?.owner_user_id;
-    const isOwned = !!ownerId;
-    const isMine = ownerId === currentUser.id;
-    const ownerPlayer = isOwned ? currentPlayers.find((p) => p.user_id === ownerId) : null;
+    // Bank-owned properties are available for purchase
+    if (!gp || !gp.owner_user_id) return true;
+    // Resale properties listed by other players
+    if (gp.is_listed && gp.owner_user_id !== currentUser?.id) return true;
+    return false;
+  });
+
+  if (availableProperties.length === 0) {
+    propertiesGrid.innerHTML = `
+      <div class="card placeholder-card" style="grid-column: 1 / -1; padding: 3.5rem 1.5rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🏘️</div>
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.35rem;">No Properties Currently Available</h3>
+        <p style="color: var(--text-muted); max-width: 460px; margin: 0 auto; line-height: 1.5;">
+          All properties on the market have been purchased. Check back next round or monitor the market for foreclosures!
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  availableProperties.forEach((prop) => {
+    const gp = gameProperties.find((g) => g.property_slug === prop.slug);
+    const isResale = !!(gp && gp.is_listed);
 
     const card = document.createElement('div');
     card.className = 'zillow-card';
     card.style.cursor = 'pointer';
 
     // Image & Status Header
-    let statusBadgeHtml = '';
-    if (!isOwned) {
-      statusBadgeHtml = `<span class="listing-badge badge-for-sale">FOR SALE</span>`;
-    } else if (isMine) {
-      statusBadgeHtml = `<span class="listing-badge badge-owned-by-you">YOUR DEED</span>`;
-    } else {
-      statusBadgeHtml = `<span class="listing-badge badge-sold">SOLD • ${escapeHtml(ownerPlayer?.display_name || 'Player')}</span>`;
-    }
+    let statusBadgeHtml = isResale
+      ? `<span class="listing-badge" style="background: #0284c7; color: #fff;">RESALE</span>`
+      : `<span class="listing-badge badge-for-sale">FOR SALE</span>`;
 
     const actionBtnHtml = `
       <button class="btn-view-property" data-slug="${prop.slug}">
