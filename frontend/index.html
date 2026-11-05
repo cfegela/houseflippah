@@ -184,15 +184,109 @@
           </div>
         </div>
 
-        <!-- Zillow Real Estate Marketplace -->
-        <section class="marketplace-section">
-          <div class="marketplace-header">
-            <h2>Buy Property</h2>
+        <!-- SUBPAGE 1: GAME DASHBOARD (6 Cards) -->
+        <section id="game-dashboard-view" class="game-dashboard-section">
+          <div class="dashboard-grid">
+            <!-- 1. Buy Properties -->
+            <div class="dashboard-card" id="card-nav-buy-properties" role="button" tabindex="0">
+              <div class="dashboard-card-title">
+                Buy Properties
+                <span class="dashboard-card-arrow">→</span>
+              </div>
+              <p class="dashboard-card-desc">
+                Browse the market and purchase bank-owned properties.
+              </p>
+            </div>
+
+            <!-- 2. Sell Properties -->
+            <div class="dashboard-card" id="card-nav-sell-properties" role="button" tabindex="0">
+              <div class="dashboard-card-title">
+                Sell Properties
+                <span class="dashboard-card-arrow">→</span>
+              </div>
+              <p class="dashboard-card-desc">
+                List properties from your real estate portfolio.
+              </p>
+            </div>
+
+            <!-- 3. Make Improvements -->
+            <div class="dashboard-card" id="card-nav-make-improvements" role="button" tabindex="0">
+              <div class="dashboard-card-title">
+                Make Improvements
+                <span class="dashboard-card-arrow">→</span>
+              </div>
+              <p class="dashboard-card-desc">
+                Renovate homes and increase property value.
+              </p>
+            </div>
+
+            <!-- 4. Make Payments -->
+            <div class="dashboard-card" id="card-nav-make-payments" role="button" tabindex="0">
+              <div class="dashboard-card-title">
+                Make Payments
+                <span class="dashboard-card-arrow">→</span>
+              </div>
+              <p class="dashboard-card-desc">
+                Make mortgage payments and avoid foreclosures.
+              </p>
+            </div>
+
+            <!-- 5. Market Report -->
+            <div class="dashboard-card" id="card-nav-market-report" role="button" tabindex="0">
+              <div class="dashboard-card-title">
+                Market Report
+                <span class="dashboard-card-arrow">→</span>
+              </div>
+              <p class="dashboard-card-desc">
+                Review market conditions and see recent transactions.
+              </p>
+            </div>
+
+            <!-- 6. Financial Report -->
+            <div class="dashboard-card" id="card-nav-financial-report" role="button" tabindex="0">
+              <div class="dashboard-card-title">
+                Financial Report
+                <span class="dashboard-card-arrow">→</span>
+              </div>
+              <p class="dashboard-card-desc">
+                Check your account balance and review spending.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- SUBPAGE 2: BUY PROPERTIES (Zillow Real Estate Marketplace) -->
+        <section id="game-buy-properties-view" class="marketplace-section hidden">
+          <div class="subpage-header">
+            <button class="btn btn-secondary btn-back-to-dashboard">
+              ← Home
+            </button>
+            <h2>Buy Properties</h2>
           </div>
 
           <!-- Properties Feed (Zillow Style) -->
           <div class="properties-grid" id="properties-grid">
             <!-- Dynamically populated property cards -->
+          </div>
+        </section>
+
+        <!-- SUBPAGE 3: PLACEHOLDER VIEW (For other 5 pages) -->
+        <section id="game-placeholder-view" class="subpage-section hidden">
+          <div class="subpage-header">
+            <button class="btn btn-secondary btn-back-to-dashboard">
+              ← Home
+            </button>
+            <h2 id="placeholder-header-title">Page Title</h2>
+          </div>
+          <div class="card placeholder-card">
+            <div id="placeholder-icon" style="font-size: 3.5rem; margin-bottom: 1rem;">🏷️</div>
+            <h3 id="placeholder-card-title" style="margin-bottom: 0.5rem; font-size: 1.4rem;">Page Title</h3>
+            <p id="placeholder-card-desc" style="color: var(--text-muted); max-width: 480px; margin: 0 auto 1.5rem auto; line-height: 1.5;">
+              This feature is planned for a future game development phase.
+            </p>
+            <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: var(--accent); padding: 0.4rem 1rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.25);">
+              Coming Soon
+            </span>
           </div>
         </section>
 

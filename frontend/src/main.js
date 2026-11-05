@@ -19,6 +19,7 @@ let currentRoom = null;
 let currentPlayers = [];
 let catalogProperties = [];
 let gameProperties = [];
+let currentGameSubpage = 'dashboard';
 let unsubscribeRealtime = null;
 
 // DOM Elements - Alerts
@@ -64,6 +65,22 @@ const myWalletDisplay = document.getElementById('my-wallet-display');
 const btnEndTurn = document.getElementById('btn-end-turn');
 const btnGameEnd = document.getElementById('btn-game-end');
 const propertiesGrid = document.getElementById('properties-grid');
+
+// DOM Elements - Active Game Subpages & Navigation
+const gameDashboardView = document.getElementById('game-dashboard-view');
+const gameBuyPropertiesView = document.getElementById('game-buy-properties-view');
+const gamePlaceholderView = document.getElementById('game-placeholder-view');
+const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
+const placeholderIcon = document.getElementById('placeholder-icon');
+const placeholderCardTitle = document.getElementById('placeholder-card-title');
+const placeholderCardDesc = document.getElementById('placeholder-card-desc');
+
+const cardNavBuyProperties = document.getElementById('card-nav-buy-properties');
+const cardNavSellProperties = document.getElementById('card-nav-sell-properties');
+const cardNavMakeImprovements = document.getElementById('card-nav-make-improvements');
+const cardNavMakePayments = document.getElementById('card-nav-make-payments');
+const cardNavMarketReport = document.getElementById('card-nav-market-report');
+const cardNavFinancialReport = document.getElementById('card-nav-financial-report');
 
 // DOM Elements - End Game Modal
 const endGameModal = document.getElementById('end-game-modal');
@@ -220,6 +237,7 @@ function showLandingView() {
   }
   currentRoom = null;
   currentPlayers = [];
+  currentGameSubpage = 'dashboard';
   setRoomUrl(null);
   closeQrModal();
   closeEndGameModal();
@@ -231,6 +249,33 @@ function showLandingView() {
 
   hostCard.classList.remove('hidden');
   joinCard.classList.add('hidden');
+}
+
+// Game Subpage Navigation
+function showGameSubpage(subpage, placeholderInfo = null) {
+  currentGameSubpage = subpage;
+  if (!gameDashboardView || !gameBuyPropertiesView || !gamePlaceholderView) return;
+
+  if (subpage === 'dashboard') {
+    gameDashboardView.classList.remove('hidden');
+    gameBuyPropertiesView.classList.add('hidden');
+    gamePlaceholderView.classList.add('hidden');
+  } else if (subpage === 'buy-properties') {
+    gameDashboardView.classList.add('hidden');
+    gameBuyPropertiesView.classList.remove('hidden');
+    gamePlaceholderView.classList.add('hidden');
+    renderProperties();
+  } else if (subpage === 'placeholder') {
+    gameDashboardView.classList.add('hidden');
+    gameBuyPropertiesView.classList.add('hidden');
+    gamePlaceholderView.classList.remove('hidden');
+    if (placeholderInfo) {
+      placeholderHeaderTitle.textContent = placeholderInfo.title;
+      placeholderIcon.textContent = placeholderInfo.icon;
+      placeholderCardTitle.textContent = placeholderInfo.title;
+      placeholderCardDesc.textContent = placeholderInfo.desc;
+    }
+  }
 }
 
 // Switch to Active Game View
@@ -249,6 +294,7 @@ async function loadAndShowGameView() {
 
     renderGameHUD();
     renderProperties();
+    showGameSubpage(currentGameSubpage || 'dashboard');
     setupRealtimeSubscription(currentRoom.id);
   } catch (err) {
     showAlert('Failed to load game: ' + err.message);
@@ -631,6 +677,83 @@ btnConfirmEndGame.addEventListener('click', async () => {
   }
   showLandingView();
   showAlert('You ended the game.', 'info');
+});
+
+// Dashboard Hub Card Navigation
+if (cardNavBuyProperties) {
+  cardNavBuyProperties.addEventListener('click', () => showGameSubpage('buy-properties'));
+  cardNavBuyProperties.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') showGameSubpage('buy-properties');
+  });
+}
+
+if (cardNavSellProperties) {
+  cardNavSellProperties.addEventListener('click', () =>
+    showGameSubpage('placeholder', {
+      title: 'Sell Properties',
+      icon: '🏷️',
+      desc: 'List properties for sale to other players and the bank. This feature will be introduced in an upcoming phase.'
+    })
+  );
+  cardNavSellProperties.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') cardNavSellProperties.click();
+  });
+}
+
+if (cardNavMakeImprovements) {
+  cardNavMakeImprovements.addEventListener('click', () =>
+    showGameSubpage('placeholder', {
+      title: 'Make Improvements',
+      icon: '🔨',
+      desc: 'Renovate properties, build houses, and increase appraisal value across your real estate holdings. Coming in an upcoming phase.'
+    })
+  );
+  cardNavMakeImprovements.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') cardNavMakeImprovements.click();
+  });
+}
+
+if (cardNavMakePayments) {
+  cardNavMakePayments.addEventListener('click', () =>
+    showGameSubpage('placeholder', {
+      title: 'Make Payments',
+      icon: '💳',
+      desc: 'Make mortgage payments and avoid foreclosures. This feature will be introduced in an upcoming phase.'
+    })
+  );
+  cardNavMakePayments.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') cardNavMakePayments.click();
+  });
+}
+
+if (cardNavMarketReport) {
+  cardNavMarketReport.addEventListener('click', () =>
+    showGameSubpage('placeholder', {
+      title: 'Market Report',
+      icon: '📈',
+      desc: 'Review market conditions and see recent transactions. This feature will be introduced in an upcoming phase.'
+    })
+  );
+  cardNavMarketReport.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') cardNavMarketReport.click();
+  });
+}
+
+if (cardNavFinancialReport) {
+  cardNavFinancialReport.addEventListener('click', () =>
+    showGameSubpage('placeholder', {
+      title: 'Financial Report',
+      icon: '📊',
+      desc: 'Check your account balance and review spending. This feature will be introduced in an upcoming phase.'
+    })
+  );
+  cardNavFinancialReport.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') cardNavFinancialReport.click();
+  });
+}
+
+document.querySelectorAll('.btn-back-to-dashboard').forEach((btn) => {
+  btn.addEventListener('click', () => showGameSubpage('dashboard'));
 });
 
 // --- App Initialization ---

@@ -477,17 +477,111 @@ input[type="text"]:focus {
   align-items: center;
 }
 
-.marketplace-section {
+.game-dashboard-section,
+.marketplace-section,
+.subpage-section {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   margin-top: 1rem;
 }
 
-.marketplace-header {
+/* Dashboard 6-Card Navigation Hub */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.dashboard-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.75rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-align: left;
+  user-select: none;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.4), 0 0 18px rgba(56, 189, 248, 0.15);
+}
+
+.dashboard-card:active {
+  transform: translateY(-1px);
+}
+
+.dashboard-card-icon {
+  font-size: 2.25rem;
+  line-height: 1;
+}
+
+.dashboard-card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-card-arrow {
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.dashboard-card:hover .dashboard-card-arrow {
+  color: var(--accent);
+  transform: translateX(4px);
+}
+
+.dashboard-card-desc {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+/* Subpage Navigation & Header */
+.subpage-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 42px;
+  margin-bottom: 1.5rem;
+}
+
+.subpage-header .btn-back-to-dashboard {
+  position: absolute;
+  left: 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.88rem;
+  border-radius: 8px;
+}
+
+.subpage-header h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: center;
+  margin: 0;
+}
+
+/* Placeholder Subpage Card */
+.placeholder-card {
+  text-align: center;
+  padding: 4rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Zillow Property Cards Grid */
