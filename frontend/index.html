@@ -138,9 +138,6 @@
               <button id="btn-start-game" class="btn btn-primary hidden" disabled>
                 Start Game
               </button>
-              <button id="btn-leave-room" class="btn btn-danger hidden">
-                End Game
-              </button>
             </div>
           </div>
         </div>
@@ -157,7 +154,7 @@
             </div>
 
             <div class="wallet-box">
-              <span class="hud-label">Your Wallet</span>
+              <span class="hud-label">Bank Account</span>
               <div class="wallet-amount" id="my-wallet-display">$100</div>
             </div>
 
@@ -165,38 +162,14 @@
               <button id="btn-end-turn" class="btn btn-primary" disabled>
                 End Turn
               </button>
-              <button id="btn-game-end" class="btn btn-danger hidden">
-                End Game
-              </button>
             </div>
-          </div>
-
-          <!-- Live Players Scoreboard Strip -->
-          <div class="players-scoreboard" id="players-scoreboard">
-            <!-- Dynamic scoreboard pills -->
           </div>
         </div>
 
         <!-- Zillow Real Estate Marketplace -->
         <section class="marketplace-section">
           <div class="marketplace-header">
-            <div>
-              <h2>Bank Real Estate Listings</h2>
-              <p style="color: var(--text-muted); font-size: 0.9rem;">
-                Browse properties and purchase bank-owned deeds on your turn.
-              </p>
-            </div>
-          </div>
-
-          <!-- Search Controls -->
-          <div class="filter-bar">
-            <input
-              type="text"
-              id="prop-search-input"
-              placeholder="Search by street name (e.g. Boardwalk, Oriental)..."
-              class="search-input"
-              autocomplete="off"
-            />
+            <h2>Buy Property</h2>
           </div>
 
           <!-- Properties Feed (Zillow Style) -->
@@ -204,6 +177,13 @@
             <!-- Dynamically populated property cards -->
           </div>
         </section>
+
+        <!-- Bottom Game Actions -->
+        <div class="game-bottom-bar">
+          <button id="btn-game-end" class="btn btn-danger hidden">
+            End Game
+          </button>
+        </div>
       </main>
     </div>
 

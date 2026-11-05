@@ -19,8 +19,6 @@ let currentRoom = null;
 let currentPlayers = [];
 let catalogProperties = [];
 let gameProperties = [];
-let currentFilter = 'all';
-let currentSearch = '';
 let unsubscribeRealtime = null;
 
 // DOM Elements - Alerts
@@ -58,7 +56,6 @@ const seatsGrid = document.getElementById('seats-grid');
 
 const lobbyWaitMsg = document.getElementById('lobby-wait-msg');
 const btnStartGame = document.getElementById('btn-start-game');
-const btnLeaveRoom = document.getElementById('btn-leave-room');
 
 // DOM Elements - Game HUD & Marketplace
 const turnIndicatorBox = document.getElementById('turn-indicator-box');
@@ -66,8 +63,6 @@ const turnPlayerDisplay = document.getElementById('turn-player-display');
 const myWalletDisplay = document.getElementById('my-wallet-display');
 const btnEndTurn = document.getElementById('btn-end-turn');
 const btnGameEnd = document.getElementById('btn-game-end');
-const playersScoreboard = document.getElementById('players-scoreboard');
-const propSearchInput = document.getElementById('prop-search-input');
 const propertiesGrid = document.getElementById('properties-grid');
 
 // Helpers
@@ -180,17 +175,13 @@ function renderSeats() {
   if (myPlayer) {
     if (myPlayer.is_host) {
       if (hostInviteControls) hostInviteControls.classList.remove('hidden');
-      btnLeaveRoom.classList.remove('hidden');
       btnStartGame.classList.remove('hidden');
       if (lobbyWaitMsg) lobbyWaitMsg.classList.add('hidden');
-      const canStart = currentPlayers.length >= 2;
+      const canStart = currentPlayers.length >= 1;
       btnStartGame.disabled = !canStart;
-      btnStartGame.title = canStart
-        ? 'Start Game'
-        : 'Waiting for players to join (2-4 players needed)';
+      btnStartGame.title = 'Start Game';
     } else {
       if (hostInviteControls) hostInviteControls.classList.add('hidden');
-      btnLeaveRoom.classList.add('hidden');
       btnStartGame.classList.add('hidden');
       if (lobbyWaitMsg) lobbyWaitMsg.classList.remove('hidden');
     }
@@ -289,26 +280,6 @@ function renderGameHUD() {
   } else {
     btnGameEnd.classList.add('hidden');
   }
-
-  // Scoreboard
-  playersScoreboard.innerHTML = '';
-  currentPlayers.forEach((p) => {
-    const ownedCount = gameProperties.filter((gp) => gp.owner_user_id === p.user_id).length;
-    const isActive = p.seat_number === activeSeat;
-    const isYou = p.user_id === currentUser.id;
-
-    const pill = document.createElement('div');
-    pill.className = `player-score-pill ${isActive ? 'active-turn' : ''}`;
-    pill.innerHTML = `
-      <span style="font-weight: 700; color: ${isActive ? 'var(--accent)' : 'inherit'};">
-        Seat ${p.seat_number}: ${escapeHtml(p.display_name)} ${isYou ? '(You)' : ''}
-      </span>
-      <span style="color: #22c55e; font-weight: 700;">$${p.cash}</span>
-      <span style="color: var(--text-muted); font-size: 0.75rem;">🏠 ${ownedCount}</span>
-      ${isActive ? '<span style="font-size: 0.75rem; color: var(--accent);">• ACTIVE</span>' : ''}
-    `;
-    playersScoreboard.appendChild(pill);
-  });
 }
 
 // Render Zillow-Style Properties Feed
@@ -319,25 +290,7 @@ function renderProperties() {
   const activeSeat = currentRoom.current_turn_seat || 1;
   const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
 
-  // Filter properties
-  let filtered = catalogProperties.filter((prop) => {
-    if (currentSearch) {
-      const q = currentSearch.toLowerCase();
-      return prop.name.toLowerCase().includes(q) || prop.group_name.toLowerCase().includes(q);
-    }
-    return true;
-  });
-
-  if (filtered.length === 0) {
-    propertiesGrid.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: var(--text-muted);">
-        No properties found matching your criteria.
-      </div>
-    `;
-    return;
-  }
-
-  filtered.forEach((prop) => {
+  catalogProperties.forEach((prop) => {
     const gp = gameProperties.find((g) => g.property_slug === prop.slug);
     const ownerId = gp?.owner_user_id;
     const isOwned = !!ownerId;
@@ -610,18 +563,6 @@ qrModal.addEventListener('click', (e) => {
   if (e.target === qrModal) closeQrModal();
 });
 
-btnLeaveRoom.addEventListener('click', async () => {
-  if (!currentRoom) return;
-  const wasRoomId = currentRoom.id;
-  try {
-    await leaveRoom(wasRoomId);
-  } catch (err) {
-    console.error('Error leaving room:', err);
-  }
-  showLandingView();
-  showAlert('You ended the game.', 'info');
-});
-
 // Host Starts Game
 btnStartGame.addEventListener('click', async () => {
   if (!currentRoom) return;
@@ -660,12 +601,6 @@ btnGameEnd.addEventListener('click', async () => {
   }
   showLandingView();
   showAlert('You ended the game.', 'info');
-});
-
-// Search Listener
-propSearchInput.addEventListener('input', (e) => {
-  currentSearch = e.target.value.trim();
-  renderProperties();
 });
 
 // --- App Initialization ---

@@ -171,8 +171,39 @@ async function runTest() {
   }
   console.log('   ✓ Room status is abandoned and all player records cleared.');
 
-  // 10. Abuse test: Name validation
-  console.log('9. Testing display name sanitization (empty name)...');
+  // 10. Test Single Player (Host-only) Game Start
+  console.log('9. Testing starting game with just the host (1 player)...');
+  const soloHost = await createAnonymousClient();
+  const { data: soloCreate, error: soloCreateErr } = await soloHost.client.rpc('create_room', {
+    p_display_name: 'SoloHost'
+  });
+  if (soloCreateErr) throw soloCreateErr;
+  const soloRoomId = soloCreate.room.id;
+
+  const { data: soloStart, error: soloStartErr } = await soloHost.client.rpc('start_game', {
+    p_room_id: soloRoomId
+  });
+  if (soloStartErr) throw new Error('Solo start_game failed: ' + soloStartErr.message);
+  console.log('   ✓ Single-player game started successfully.');
+  if (soloStart.room.status !== 'in_progress' || soloStart.room.current_turn_seat !== 1) {
+    throw new Error('Solo game room state unexpected');
+  }
+
+  // Verify single-player turn advance wraps to seat 1
+  const { data: soloTurn, error: soloTurnErr } = await soloHost.client.rpc('end_turn', {
+    p_room_id: soloRoomId
+  });
+  if (soloTurnErr) throw soloTurnErr;
+  if (soloTurn.current_turn_seat !== 1) {
+    throw new Error(`Expected seat 1 after single player turn wrap, got ${soloTurn.current_turn_seat}`);
+  }
+  console.log('   ✓ Single-player turn advance correctly wrapped back to Seat 1.');
+
+  // Clean up solo room
+  await soloHost.client.rpc('leave_room', { p_room_id: soloRoomId });
+
+  // 11. Abuse test: Name validation
+  console.log('10. Testing display name sanitization (empty name)...');
   const { error: badNameErr } = await p1.client.rpc('join_room', {
     p_room_id: roomId,
     p_display_name: '   '
