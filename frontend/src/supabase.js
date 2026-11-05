@@ -120,6 +120,20 @@ export async function makeMortgagePayment(roomId, propertySlug, payDouble = fals
 }
 
 /**
+ * List a property for sale (cannot list in the same round it was purchased).
+ */
+export async function listProperty(roomId, propertySlug, listPrice) {
+  const { data, error } = await supabase.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: propertySlug,
+    p_list_price: listPrice,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
  * End active player turn and advance to the next player.
  */
 export async function endTurn(roomId) {

@@ -481,6 +481,10 @@ function renderPropertyDetails(slug) {
   const downPayment = (totalCost * 10) / 100;
   const roundMortgage = totalCost / 40;
   const canAfford = myPlayer && myPlayer.cash >= downPayment;
+  const currentRound = currentRoom?.current_round || 1;
+  const hasPurchasedThisRound = gameProperties.some(
+    (g) => g.owner_user_id === currentUser?.id && g.purchased_round === currentRound
+  );
 
   let statusBadgeHtml = '';
   if (isBankOwned) {
@@ -494,7 +498,13 @@ function renderPropertyDetails(slug) {
   let actionHtml = '';
   if (isBankOwned) {
     if (isMyTurn) {
-      if (canAfford) {
+      if (hasPurchasedThisRound) {
+        actionHtml = `
+          <button class="btn-detail-buy" disabled title="You can only purchase 1 property per round">
+            Purchase Property
+          </button>
+        `;
+      } else if (canAfford) {
         actionHtml = `
           <button class="btn-detail-buy" id="btn-buy-property-detail" data-slug="${prop.slug}">
             Purchase Property

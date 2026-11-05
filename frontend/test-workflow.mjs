@@ -132,6 +132,27 @@ async function runTest() {
     throw new Error('Mortgage state on purchase not properly initialized');
   }
 
+  // Enforce Rule 2: Cannot buy a second property in the same round
+  const { error: secondBuyErr } = await p1.client.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: 'baltic-ave'
+  });
+  if (!secondBuyErr || !secondBuyErr.message.includes('1 property per round')) {
+    throw new Error('Expected 1 purchase per round limit error!');
+  }
+  console.log(`   ✓ 1 purchase per round limit enforced: "${secondBuyErr.message}"`);
+
+  // Enforce Rule 1: Cannot list property in the same round it was purchased
+  const { error: sameRoundListErr } = await p1.client.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_list_price: 120000
+  });
+  if (!sameRoundListErr || !sameRoundListErr.message.includes('same round it was purchased')) {
+    throw new Error('Expected same round listing restriction error!');
+  }
+  console.log(`   ✓ Same round listing restriction enforced: "${sameRoundListErr.message}"`);
+
   // Player 1 attempts to pay mortgage in Round 1 -> should fail (already covered for purchase round)
   const { error: alreadyPaidErr } = await p1.client.rpc('make_mortgage_payment', {
     p_room_id: roomId,
@@ -163,6 +184,15 @@ async function runTest() {
   if (payData.paid_amount !== 1500) throw new Error(`Expected $1,500 payment, got ${payData.paid_amount}`);
   if (payData.player.cash !== 92500) throw new Error(`Expected $92,500 cash, got ${payData.player.cash}`);
   console.log(`   ✓ Player 1 made 1/40th mortgage payment ($1,500)! Remaining cash: $${payData.player.cash}.`);
+
+  // In Round 2: Listing Mediterranean Ave is now permitted because purchased_round (1) < current_round (2)
+  const { data: listData, error: listErr } = await p1.client.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_list_price: 120000
+  });
+  if (listErr) throw listErr;
+  console.log('   ✓ Listing permitted in subsequent Round 2 for $120,000!');
 
   // Player 1 buys Baltic Ave ($60k, $6k down) in Round 2, then tests skipping payment & foreclosure
   await p1.client.rpc('buy_property', { p_room_id: roomId, p_property_slug: 'baltic-ave' });
