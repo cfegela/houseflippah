@@ -178,29 +178,50 @@ async function runTest() {
   if (balticCheck.missed_payments !== 1) throw new Error(`Expected 1 missed payment, got ${balticCheck.missed_payments}`);
   console.log('   ✓ Baltic Ave is Delinquent (1 missed payment) with no penalty yet.');
 
-  // In Round 4: Player 1 makes DOUBLE payment ($3,000) to bring Baltic Ave current!
+  // In Round 4: Baltic Ave is delinquent. Player 1 tests SINGLE payment ($1,500) to stave off foreclosure!
+  const { data: singlePayData, error: singlePayErr } = await p1.client.rpc('make_mortgage_payment', {
+    p_room_id: roomId,
+    p_property_slug: 'baltic-ave',
+    p_pay_double: false
+  });
+  if (singlePayErr) throw singlePayErr;
+  if (singlePayData.paid_amount !== 1500 || singlePayData.missed_payments !== 1) {
+    throw new Error('Expected $1,500 single payment with mortgage remaining delinquent!');
+  }
+  console.log('   ✓ Player 1 made single payment ($1,500) on delinquent Baltic Ave to stave off foreclosure!');
+
+  // Advance to Round 5: Verify Baltic Ave was NOT foreclosed and is still delinquent
+  await advanceFullRound(); // -> Round 5 starts
+  const { data: balticRound5 } = await p1.client.from('game_properties').select('*').eq('room_id', roomId).eq('property_slug', 'baltic-ave').single();
+  if (balticRound5.owner_user_id === null || balticRound5.missed_payments !== 1) {
+    throw new Error('Expected Baltic Ave to survive round transition and remain delinquent!');
+  }
+  console.log('   ✓ Baltic Ave survived round transition without foreclosure (still 1 payment behind).');
+
+  // In Round 5: Player 1 makes DOUBLE payment ($3,000) to bring Baltic Ave completely current!
   const { data: doublePayData, error: doublePayErr } = await p1.client.rpc('make_mortgage_payment', {
     p_room_id: roomId,
-    p_property_slug: 'baltic-ave'
+    p_property_slug: 'baltic-ave',
+    p_pay_double: true
   });
   if (doublePayErr) throw doublePayErr;
-  if (!doublePayData.was_double_payment || doublePayData.paid_amount !== 3000) {
-    throw new Error('Expected $3,000 double payment to bring current!');
+  if (!doublePayData.was_double_payment || doublePayData.paid_amount !== 3000 || doublePayData.missed_payments !== 0) {
+    throw new Error('Expected $3,000 double payment to bring Baltic Ave current!');
   }
-  console.log(`   ✓ Player 1 made double payment ($3,000) and brought Baltic Ave mortgage current!`);
+  console.log('   ✓ Player 1 made double payment ($3,000) and brought Baltic Ave mortgage current!');
 
-  // Now test Foreclosure: Player 1 buys Oriental Ave ($100k, $10k down) in Round 4
+  // Now test Foreclosure: Player 1 buys Oriental Ave ($100k, $10k down) in Round 5
   await p1.client.rpc('buy_property', { p_room_id: roomId, p_property_slug: 'oriental-ave' });
 
-  // Advance to Round 5 (Oriental payment due in Round 5)
-  await advanceFullRound(); // -> Round 5 starts
-
-  // Round 5: Player 1 skips payment -> Round 6 starts (Oriental missed_payments = 1)
+  // Advance to Round 6 (Oriental payment due in Round 6)
   await advanceFullRound(); // -> Round 6 starts
 
-  // Round 6: Player 1 skips second payment -> Round 7 starts (Foreclosure!)
-  const round7Advance = await advanceFullRound(); // -> Round 7 starts
-  console.log(`   ✓ Round 7 reached. Foreclosure processed: ${round7Advance.foreclosed_count} properties foreclosed.`);
+  // Round 6: Player 1 skips payment -> Round 7 starts (Oriental missed_payments = 1)
+  await advanceFullRound(); // -> Round 7 starts
+
+  // Round 7: Player 1 skips second payment -> Round 8 starts (Foreclosure!)
+  const round8Advance = await advanceFullRound(); // -> Round 8 starts
+  console.log(`   ✓ Round 8 reached. Foreclosure processed: ${round8Advance.foreclosed_count} properties foreclosed.`);
 
   const { data: orientalCheck } = await p1.client.from('game_properties').select('*').eq('room_id', roomId).eq('property_slug', 'oriental-ave').single();
   if (orientalCheck.owner_user_id !== null) {

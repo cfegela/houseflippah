@@ -108,10 +108,11 @@ export async function buyProperty(roomId, propertySlug) {
 /**
  * Make a manual mortgage payment on a property (1/40th value, or 2x if delinquent).
  */
-export async function makeMortgagePayment(roomId, propertySlug) {
+export async function makeMortgagePayment(roomId, propertySlug, payDouble = false) {
   const { data, error } = await supabase.rpc('make_mortgage_payment', {
     p_room_id: roomId,
     p_property_slug: propertySlug,
+    p_pay_double: payDouble,
   });
 
   if (error) throw error;

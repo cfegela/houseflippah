@@ -817,6 +817,12 @@ input[type="text"]:focus {
   animation: pulse-delinquent 2s infinite ease-in-out;
 }
 
+.badge-delinquent-paid {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid #f59e0b;
+}
+
 @keyframes pulse-delinquent {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.85; }
@@ -832,6 +838,7 @@ input[type="text"]:focus {
   font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: center;
 }
 
 .btn-pay-mortgage:hover:not(:disabled) {
@@ -849,6 +856,18 @@ input[type="text"]:focus {
 .btn-pay-mortgage.btn-pay-delinquent {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   color: #000;
+  font-weight: 800;
+}
+
+.btn-pay-mortgage.btn-pay-single-delinquent {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff;
+  font-weight: 700;
+}
+
+.btn-pay-mortgage.btn-pay-double-delinquent {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  color: #fff;
   font-weight: 800;
 }
 

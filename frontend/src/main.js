@@ -482,8 +482,7 @@ function renderMortgagePayments() {
 
     const basePayment = catalog.cost / 40;
     const isDelinquent = (gp.missed_payments || 0) >= 1;
-    const isPaidThisRound = !isDelinquent && (gp.last_paid_round || 0) >= currentRound;
-    const requiredPayment = isDelinquent ? basePayment * 2 : basePayment;
+    const isPaidThisRound = (gp.last_paid_round || 0) >= currentRound;
 
     const card = document.createElement('div');
     card.className = `mortgage-card ${isDelinquent ? 'is-delinquent' : ''}`;
@@ -493,24 +492,45 @@ function renderMortgagePayments() {
     let actionBtnHtml = '';
 
     if (isPaidThisRound) {
-      statusBadge = `<span class="badge badge-paid">PAID FOR ROUND ${currentRound} ✓</span>`;
-      actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Paid for Round ${currentRound}</button>`;
+      if (isDelinquent) {
+        statusBadge = `<span class="badge badge-delinquent-paid">ROUND ${currentRound} PAID • DELINQUENT</span>`;
+        warningBox = `
+          <div class="mortgage-warning-box">
+            <strong>⚠️ Protected for Round ${currentRound}:</strong> You made a single payment to stave off foreclosure for this round. However, you are still 1 payment in arrears. Next round, you may make another single payment or pay double to clear the delinquency.
+          </div>
+        `;
+        actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Protected for Round ${currentRound}</button>`;
+      } else {
+        statusBadge = `<span class="badge badge-paid">PAID FOR ROUND ${currentRound} ✓</span>`;
+        actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Paid for Round ${currentRound}</button>`;
+      }
     } else if (isDelinquent) {
       statusBadge = `<span class="badge badge-delinquent">⚠️ DELINQUENT • 1 MISSED</span>`;
       warningBox = `
         <div class="mortgage-warning-box">
-          <strong>⚠️ Final Foreclosure Warning:</strong> You missed payment last round. Pay double <strong>(${formatMoney(requiredPayment)})</strong> this round to bring your mortgage current, or the bank will foreclose and repossess the property when the round ends!
+          <strong>⚠️ Foreclosure Warning:</strong> You missed payment last round. Choose an option: pay <strong>single (${formatMoney(basePayment)})</strong> to stave off foreclosure this round while remaining delinquent, or pay <strong>double (${formatMoney(basePayment * 2)})</strong> to bring your mortgage completely current.
         </div>
       `;
       if (isMyTurn) {
-        actionBtnHtml = `<button class="btn-pay-mortgage btn-pay-delinquent" data-slug="${catalog.slug}">Pay Double (${formatMoney(requiredPayment)})</button>`;
+        actionBtnHtml = `
+          <div style="display: flex; gap: 0.75rem; width: 100%; flex-wrap: wrap;">
+            <button class="btn-pay-mortgage btn-pay-single-delinquent" data-slug="${catalog.slug}" data-double="false" style="flex: 1; min-width: 130px;">
+              Pay Single (${formatMoney(basePayment)})
+              <span style="display: block; font-size: 0.72rem; opacity: 0.9; margin-top: 2px;">Stave Off Foreclosure</span>
+            </button>
+            <button class="btn-pay-mortgage btn-pay-double-delinquent" data-slug="${catalog.slug}" data-double="true" style="flex: 1; min-width: 130px;">
+              Pay Double (${formatMoney(basePayment * 2)})
+              <span style="display: block; font-size: 0.72rem; opacity: 0.9; margin-top: 2px;">Bring Current</span>
+            </button>
+          </div>
+        `;
       } else {
         actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Waiting for Turn</button>`;
       }
     } else {
       statusBadge = `<span class="badge badge-due">DUE ROUND ${currentRound}</span>`;
       if (isMyTurn) {
-        actionBtnHtml = `<button class="btn-pay-mortgage" data-slug="${catalog.slug}">Pay Mortgage (${formatMoney(requiredPayment)})</button>`;
+        actionBtnHtml = `<button class="btn-pay-mortgage" data-slug="${catalog.slug}" data-double="false">Pay Mortgage (${formatMoney(basePayment)})</button>`;
       } else {
         actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Waiting for Turn</button>`;
       }
@@ -535,9 +555,9 @@ function renderMortgagePayments() {
           <span class="mortgage-stat-val" style="color: #38bdf8;">${formatMoney(basePayment)}</span>
         </div>
         <div class="mortgage-stat">
-          <span class="mortgage-stat-label">Amount Due Now</span>
-          <span class="mortgage-stat-val" style="color: ${isDelinquent ? '#f59e0b' : '#22c55e'};">
-            ${isPaidThisRound ? '$0' : formatMoney(requiredPayment)}
+          <span class="mortgage-stat-label">Status</span>
+          <span class="mortgage-stat-val" style="color: ${isDelinquent ? '#f59e0b' : '#22c55e'}; font-size: 0.95rem;">
+            ${isPaidThisRound ? (isDelinquent ? 'Delinquent (Paid Rd)' : 'Current (Paid)') : (isDelinquent ? '1 Missed Payment' : 'Payment Due')}
           </span>
         </div>
       </div>
@@ -547,14 +567,20 @@ function renderMortgagePayments() {
       </div>
     `;
 
-    // Hook payment button
-    const payBtn = card.querySelector('.btn-pay-mortgage:not(:disabled)');
-    if (payBtn) {
+    // Hook payment buttons
+    const payBtns = card.querySelectorAll('.btn-pay-mortgage:not(:disabled)');
+    payBtns.forEach((payBtn) => {
       payBtn.addEventListener('click', async () => {
-        payBtn.disabled = true;
-        payBtn.textContent = 'Processing Payment...';
+        const isDouble = payBtn.dataset.double === 'true';
+        const paymentAmount = isDouble ? basePayment * 2 : basePayment;
+
+        payBtns.forEach((b) => {
+          b.disabled = true;
+        });
+        payBtn.textContent = 'Processing...';
+
         try {
-          await makeMortgagePayment(currentRoom.id, catalog.slug);
+          await makeMortgagePayment(currentRoom.id, catalog.slug, isDouble);
           const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
           currentRoom = room;
           currentPlayers = players;
@@ -562,13 +588,21 @@ function renderMortgagePayments() {
           renderGameHUD();
           renderMortgagePayments();
           renderProperties();
-          showAlert(`Mortgage payment of ${formatMoney(requiredPayment)} processed successfully!`, 'success');
+          showAlert(
+            isDouble
+              ? `Mortgage caught up! Double payment of ${formatMoney(paymentAmount)} brought ${catalog.name} current.`
+              : `Mortgage payment of ${formatMoney(paymentAmount)} processed for ${catalog.name}.`,
+            'success'
+          );
         } catch (err) {
           showAlert(err.message || 'Failed to make mortgage payment.');
-          payBtn.disabled = false;
+          payBtns.forEach((b) => {
+            b.disabled = false;
+          });
+          renderMortgagePayments();
         }
       });
-    }
+    });
 
     mortgagePaymentsContainer.appendChild(card);
   });
