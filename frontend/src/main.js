@@ -66,6 +66,10 @@ const btnGameEnd = document.getElementById('btn-game-end');
 const propertiesGrid = document.getElementById('properties-grid');
 
 // Helpers
+function formatMoney(amount) {
+  return '$' + Number(amount || 0).toLocaleString('en-US');
+}
+
 function showAlert(message, type = 'error') {
   alertMsg.textContent = message;
   alertBox.className = `alert alert-${type}`;
@@ -254,7 +258,7 @@ function renderGameHUD() {
 
   // Turn Indicator Box
   if (activePlayer) {
-    turnPlayerDisplay.textContent = `Seat ${activeSeat}: ${activePlayer.display_name} ${isMyTurn ? '(You!)' : ''}`;
+    turnPlayerDisplay.textContent = `Seat ${activeSeat}: ${activePlayer.display_name}`;
   } else {
     turnPlayerDisplay.textContent = `Seat ${activeSeat}`;
   }
@@ -271,7 +275,7 @@ function renderGameHUD() {
 
   // Wallet
   if (myPlayer) {
-    myWalletDisplay.textContent = `$${myPlayer.cash}`;
+    myWalletDisplay.textContent = formatMoney(myPlayer.cash);
   }
 
   // Host Controls
@@ -317,9 +321,9 @@ function renderProperties() {
     if (!isOwned) {
       if (isMyTurn) {
         if (canAfford) {
-          actionBtnHtml = `<button class="btn-buy" data-slug="${prop.slug}">Buy Property ($${prop.cost})</button>`;
+          actionBtnHtml = `<button class="btn-buy" data-slug="${prop.slug}">Buy Property (${formatMoney(prop.cost)})</button>`;
         } else {
-          actionBtnHtml = `<button class="btn-buy" disabled>Need $${prop.cost - myPlayer.cash} More</button>`;
+          actionBtnHtml = `<button class="btn-buy" disabled>Need ${formatMoney(prop.cost - myPlayer.cash)} More</button>`;
         }
       } else {
         actionBtnHtml = `<button class="btn-buy" disabled>Waiting for Turn</button>`;
@@ -339,7 +343,7 @@ function renderProperties() {
         </div>
       </div>
       <div class="card-body">
-        <div class="prop-price">$${prop.cost}</div>
+        <div class="prop-price">${formatMoney(prop.cost)}</div>
         <div class="prop-specs">${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft</div>
         <div class="prop-name">${escapeHtml(prop.name)}</div>
       </div>
@@ -366,7 +370,7 @@ function renderProperties() {
         } catch (err) {
           showAlert(err.message || 'Failed to purchase property.');
           buyBtn.disabled = false;
-          buyBtn.textContent = `Buy Property ($${prop.cost})`;
+          buyBtn.textContent = `Buy Property (${formatMoney(prop.cost)})`;
         }
       });
     }

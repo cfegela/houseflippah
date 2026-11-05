@@ -94,18 +94,18 @@ async function runTest() {
   console.log(`   ✓ Player 5 joined successfully into freed Seat ${p5SecondJoin.player.seat_number}!`);
 
   // 8. Test Starting Game, Banking & Real Estate
-  console.log('7b. Testing Game Start, $100 Starting Cash & Property Purchasing...');
+  console.log('7b. Testing Game Start, $100,000 Starting Cash & Property Purchasing...');
   const { data: startData, error: startErr } = await p1.client.rpc('start_game', {
     p_room_id: roomId
   });
   if (startErr) throw new Error('start_game failed: ' + startErr.message);
   console.log('   ✓ Game started successfully. Status is in_progress, current turn is Seat 1.');
 
-  // Check players cash = 100
+  // Check players cash = 100,000
   const { data: playersWithCash } = await p1.client.from('room_players').select('*').eq('room_id', roomId);
-  const all100 = playersWithCash.every(p => p.cash === 100);
-  if (!all100) throw new Error('Not all players started with $100!');
-  console.log('   ✓ Verified all players have exactly $100 starting cash.');
+  const all100k = playersWithCash.every(p => p.cash === 100000);
+  if (!all100k) throw new Error('Not all players started with $100,000!');
+  console.log('   ✓ Verified all players have exactly $100,000 starting cash.');
 
   // Check properties seeded (28 deeds)
   const { data: roomProps } = await p1.client.from('game_properties').select('*').eq('room_id', roomId);
@@ -120,7 +120,7 @@ async function runTest() {
   if (!notYourTurnErr) throw new Error('Expected "not your turn" error for Player 2!');
   console.log(`   ✓ Strict turn enforcement verified: "${notYourTurnErr.message}"`);
 
-  // Player 1 attempts to buy Boardwalk ($400) with $100 -> should fail
+  // Player 1 attempts to buy Boardwalk ($400,000) with $100,000 -> should fail
   const { error: noCashErr } = await p1.client.rpc('buy_property', {
     p_room_id: roomId,
     p_property_slug: 'boardwalk'
@@ -128,14 +128,14 @@ async function runTest() {
   if (!noCashErr) throw new Error('Expected insufficient funds error for Boardwalk!');
   console.log(`   ✓ Insufficient funds check verified: "${noCashErr.message}"`);
 
-  // Player 1 buys Mediterranean Ave ($60) -> succeeds!
+  // Player 1 buys Mediterranean Ave ($60,000) -> succeeds!
   const { data: buyData, error: buyErr } = await p1.client.rpc('buy_property', {
     p_room_id: roomId,
     p_property_slug: 'mediterranean-ave'
   });
   if (buyErr) throw new Error('buy_property failed: ' + buyErr.message);
-  if (buyData.player.cash !== 40) throw new Error(`Expected $40 cash remaining, got ${buyData.player.cash}`);
-  console.log(`   ✓ Player 1 bought Mediterranean Avenue for $60! Remaining cash: $${buyData.player.cash}.`);
+  if (buyData.player.cash !== 40000) throw new Error(`Expected $40,000 cash remaining, got ${buyData.player.cash}`);
+  console.log(`   ✓ Player 1 bought Mediterranean Avenue for $60,000! Remaining cash: $${buyData.player.cash}.`);
 
   // Player 1 ends turn -> advances to Seat 2
   const { data: endTurnData, error: endTurnErr } = await p1.client.rpc('end_turn', {
