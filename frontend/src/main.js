@@ -9,6 +9,8 @@ import {
   subscribeToRoom,
   startGame,
   buyProperty,
+  listProperty,
+  delistProperty,
   makeMortgagePayment,
   endTurn,
   fetchGameData,
@@ -74,6 +76,8 @@ const gameDashboardView = document.getElementById('game-dashboard-view');
 const gameBuyPropertiesView = document.getElementById('game-buy-properties-view');
 const gamePropertyDetailsView = document.getElementById('game-property-details-view');
 const propertyDetailsContainer = document.getElementById('property-details-container');
+const gameSellPropertiesView = document.getElementById('game-sell-properties-view');
+const sellPropertiesContainer = document.getElementById('sell-properties-container');
 const gameMakePaymentsView = document.getElementById('game-make-payments-view');
 const mortgagePaymentsContainer = document.getElementById('mortgage-payments-container');
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
@@ -105,6 +109,16 @@ const btnCancelPurchase = document.getElementById('btn-cancel-purchase');
 const btnConfirmPurchase = document.getElementById('btn-confirm-purchase');
 
 let pendingPurchaseProperty = null;
+
+// DOM Elements - List Property Modal
+const listPropertyModal = document.getElementById('list-property-modal');
+const modalListPropertyName = document.getElementById('modal-list-property-name');
+const modalListPropertyBaseCost = document.getElementById('modal-list-property-base-cost');
+const modalListPriceInput = document.getElementById('modal-list-price-input');
+const btnCancelListProperty = document.getElementById('btn-cancel-list-property');
+const btnConfirmListProperty = document.getElementById('btn-confirm-list-property');
+
+let pendingListProperty = null;
 
 // Helpers
 function formatMoney(amount) {
@@ -155,14 +169,14 @@ function escapeHtml(text) {
 // Generate SVG architectural placeholder card graphic
 function getPropertySvgPlaceholder(colorHex) {
   return `
-    <svg viewBox="0 0 400 180" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <svg viewBox="0 0 400 180" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
       <defs>
         <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#1e293b"/>
           <stop offset="100%" stop-color="#0f172a"/>
         </linearGradient>
       </defs>
-      <rect width="100%" height="100%" fill="url(#bg-grad)"/>
+      <rect width="100%" height="100%" fill="url(#bg-grad)" class="svg-bg-rect"/>
       <circle cx="200" cy="110" r="90" fill="${colorHex}" opacity="0.12"/>
       <polygon points="200,35 120,95 280,95" fill="${colorHex}" opacity="0.85"/>
       <rect x="140" y="95" width="120" height="65" fill="#334155"/>
@@ -279,12 +293,14 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gameDashboardView.classList.remove('hidden');
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
   } else if (subpage === 'buy-properties') {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.remove('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
     renderProperties();
@@ -292,13 +308,23 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.remove('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
     if (selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
+  } else if (subpage === 'sell-properties') {
+    gameDashboardView.classList.add('hidden');
+    gameBuyPropertiesView.classList.add('hidden');
+    if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.remove('hidden');
+    gamePlaceholderView.classList.add('hidden');
+    gameMakePaymentsView.classList.add('hidden');
+    renderSellProperties();
   } else if (subpage === 'make-payments') {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.remove('hidden');
     renderMortgagePayments();
@@ -306,6 +332,7 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
     gamePlaceholderView.classList.remove('hidden');
     if (placeholderInfo) {
@@ -431,7 +458,7 @@ function renderProperties() {
         <div class="card-img-badge-row" style="justify-content: flex-end;">
           ${statusBadgeHtml}
         </div>
-        <div style="position: absolute; inset: 0; z-index: 1;">
+        <div class="property-hero-graphic" style="position: absolute; inset: 0; z-index: 1;">
           ${getPropertySvgPlaceholder(prop.color_hex)}
         </div>
       </div>
@@ -501,12 +528,10 @@ function renderPropertyDetails(slug) {
   );
 
   let statusBadgeHtml = '';
-  if (isBankOwned) {
-    statusBadgeHtml = `<span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #16a34a; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">BANK-OWNED • AVAILABLE</span>`;
-  } else if (isOwnedByMe) {
-    statusBadgeHtml = `<span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #0284c7; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">YOUR DEED</span>`;
-  } else {
-    statusBadgeHtml = `<span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #475569; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">OWNED BY SEAT ${ownerPlayer?.seat_number || '?'} (${escapeHtml(ownerPlayer?.display_name || 'Player')})</span>`;
+  if (isOwnedByMe) {
+    statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #0284c7; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">YOUR DEED</span></div>`;
+  } else if (!isBankOwned) {
+    statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #475569; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">OWNED BY SEAT ${ownerPlayer?.seat_number || '?'} (${escapeHtml(ownerPlayer?.display_name || 'Player')})</span></div>`;
   }
 
   let actionHtml = '';
@@ -558,10 +583,8 @@ function renderPropertyDetails(slug) {
   detailCard.innerHTML = `
     <div class="property-detail-stripe" style="background-color: ${prop.color_hex};"></div>
     <div class="property-detail-hero">
-      <div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;">
-        ${statusBadgeHtml}
-      </div>
-      <div style="position: absolute; inset: 0; z-index: 1;">
+      ${statusBadgeHtml}
+      <div class="property-hero-graphic" style="position: absolute; inset: 0; z-index: 1;">
         ${getPropertySvgPlaceholder(prop.color_hex)}
       </div>
     </div>
@@ -694,6 +717,246 @@ if (btnConfirmPurchase) {
       showAlert(err.message || 'Failed to purchase property.');
       btnConfirmPurchase.disabled = false;
       btnConfirmPurchase.textContent = 'Confirm Purchase';
+    }
+  });
+}
+
+// Render Sell Properties (Portfolio Feed)
+function renderSellProperties() {
+  if (!sellPropertiesContainer) return;
+  sellPropertiesContainer.innerHTML = '';
+
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  const activeSeat = currentRoom?.current_turn_seat || 1;
+  const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
+  const currentRound = currentRoom?.current_round || 1;
+
+  const myProperties = gameProperties.filter((gp) => gp.owner_user_id === currentUser?.id);
+
+  if (myProperties.length === 0) {
+    sellPropertiesContainer.innerHTML = `
+      <div class="card placeholder-card" style="padding: 4rem 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🏷️</div>
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.35rem;">No Properties in Portfolio</h3>
+        <p style="color: var(--text-muted); max-width: 460px; margin: 0 auto 1.5rem auto; line-height: 1.5;">
+          You don't own any properties yet. Head over to <strong>Buy Properties</strong> on your turn to finance your first real estate deed with 10% down!
+        </p>
+        <button class="btn btn-primary" id="btn-goto-buy-from-sell" style="padding: 0.65rem 1.5rem;">
+          Browse Properties
+        </button>
+      </div>
+    `;
+    const gotoBtn = document.getElementById('btn-goto-buy-from-sell');
+    if (gotoBtn) gotoBtn.addEventListener('click', () => showGameSubpage('buy-properties'));
+    return;
+  }
+
+  myProperties.forEach((gp) => {
+    const prop = catalogProperties.find((cp) => cp.slug === gp.property_slug);
+    if (!prop) return;
+
+    const totalCost = prop.cost;
+    const downPayment = (totalCost * 10) / 100;
+    const roundMortgage = totalCost / 40;
+    const isPurchasedThisRound = gp.purchased_round === currentRound;
+    const isListed = !!gp.is_listed;
+
+    let statusBadgeHtml = '';
+    if (isListed) {
+      statusBadgeHtml = `
+        <div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;">
+          <span class="badge" style="background: rgba(2, 132, 199, 0.25); color: #38bdf8; border: 1px solid #0284c7; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">
+            LISTED • ${formatMoney(gp.list_price)}
+          </span>
+        </div>
+      `;
+    }
+
+    let actionBtnHtml = '';
+    if (isListed) {
+      if (isMyTurn) {
+        actionBtnHtml = `
+          <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-delist-property" data-slug="${prop.slug}" style="padding: 0.85rem 1.5rem; font-weight: 700; border-radius: 8px;">
+              Delist Property
+            </button>
+            <button class="btn-detail-buy btn-open-list-modal" data-slug="${prop.slug}">
+              Update Asking Price
+            </button>
+          </div>
+        `;
+      } else {
+        actionBtnHtml = `<button class="btn-detail-buy" disabled>Listed for ${formatMoney(gp.list_price)}</button>`;
+      }
+    } else {
+      if (isMyTurn) {
+        if (isPurchasedThisRound) {
+          actionBtnHtml = `
+            <button class="btn-detail-buy" disabled title="You cannot buy and list the same property in the same round (Eligible Round ${currentRound + 1})">
+              List Property
+            </button>
+          `;
+        } else {
+          actionBtnHtml = `
+            <button class="btn-detail-buy btn-open-list-modal" data-slug="${prop.slug}">
+              List Property
+            </button>
+          `;
+        }
+      } else {
+        actionBtnHtml = `<button class="btn-detail-buy" disabled>Waiting for Turn</button>`;
+      }
+    }
+
+    const card = document.createElement('div');
+    card.className = 'property-detail-card';
+
+    card.innerHTML = `
+      <div class="property-detail-stripe" style="background-color: ${prop.color_hex};"></div>
+      <div class="property-detail-hero">
+        ${statusBadgeHtml}
+        <div class="property-hero-graphic" style="position: absolute; inset: 0; z-index: 1;">
+          ${getPropertySvgPlaceholder(prop.color_hex)}
+        </div>
+      </div>
+      <div class="property-detail-body">
+        <div class="property-detail-header-row">
+          <div class="property-detail-title-group">
+            <h3 style="margin: 0;">${escapeHtml(prop.name)}</h3>
+          </div>
+        </div>
+
+        <div class="property-detail-grid">
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Total Value</span>
+            <span class="property-detail-stat-val">${formatMoney(totalCost)}</span>
+          </div>
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">10% Down Paid</span>
+            <span class="property-detail-stat-val accent">${formatMoney(downPayment)}</span>
+          </div>
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Mortgage / Round</span>
+            <span class="property-detail-stat-val" style="color: #38bdf8;">${formatMoney(roundMortgage)}</span>
+          </div>
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Layout & Size</span>
+            <span class="property-detail-stat-val" style="font-size: 1.1rem; padding-top: 0.2rem;">
+              ${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="property-detail-actions" style="justify-content: flex-end;">
+        <div>
+          ${actionBtnHtml}
+        </div>
+      </div>
+    `;
+
+    const openListBtn = card.querySelector('.btn-open-list-modal');
+    if (openListBtn) {
+      openListBtn.addEventListener('click', () => {
+        openListModal(prop, gp);
+      });
+    }
+
+    const delistBtn = card.querySelector('.btn-delist-property');
+    if (delistBtn) {
+      delistBtn.addEventListener('click', async () => {
+        delistBtn.disabled = true;
+        delistBtn.textContent = 'Delisting...';
+        try {
+          await delistProperty(currentRoom.id, prop.slug);
+          const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+          currentRoom = room;
+          currentPlayers = players;
+          gameProperties = updatedProps;
+          renderGameHUD();
+          renderProperties();
+          renderSellProperties();
+        } catch (err) {
+          showAlert(err.message || 'Failed to delist property.');
+          delistBtn.disabled = false;
+          delistBtn.textContent = 'Delist Property';
+        }
+      });
+    }
+
+    sellPropertiesContainer.appendChild(card);
+  });
+}
+
+// List Property Modal Logic
+function openListModal(prop, gp) {
+  if (!prop || !currentRoom) return;
+  pendingListProperty = prop;
+
+  if (modalListPropertyName) modalListPropertyName.textContent = prop.name;
+  if (modalListPropertyBaseCost) modalListPropertyBaseCost.textContent = formatMoney(prop.cost);
+  if (modalListPriceInput) {
+    modalListPriceInput.value = gp?.list_price || prop.cost;
+    setTimeout(() => {
+      modalListPriceInput.focus();
+      modalListPriceInput.select();
+    }, 50);
+  }
+
+  if (btnConfirmListProperty) {
+    btnConfirmListProperty.disabled = false;
+    btnConfirmListProperty.textContent = gp?.is_listed ? 'Update Asking Price' : 'List for Sale';
+  }
+
+  if (listPropertyModal) {
+    listPropertyModal.classList.remove('hidden');
+  }
+}
+
+function closeListModal() {
+  if (listPropertyModal) listPropertyModal.classList.add('hidden');
+  pendingListProperty = null;
+}
+
+if (btnCancelListProperty) {
+  btnCancelListProperty.addEventListener('click', closeListModal);
+}
+
+if (listPropertyModal) {
+  listPropertyModal.addEventListener('click', (e) => {
+    if (e.target === listPropertyModal) closeListModal();
+  });
+}
+
+if (btnConfirmListProperty) {
+  btnConfirmListProperty.addEventListener('click', async () => {
+    if (!pendingListProperty || !currentRoom) return;
+    const askingPrice = parseInt(modalListPriceInput.value, 10);
+    if (!askingPrice || askingPrice <= 0) {
+      showAlert('Please enter a valid asking price greater than $0.');
+      modalListPriceInput.focus();
+      return;
+    }
+
+    btnConfirmListProperty.disabled = true;
+    btnConfirmListProperty.textContent = 'Listing...';
+
+    try {
+      await listProperty(currentRoom.id, pendingListProperty.slug, askingPrice);
+      closeListModal();
+
+      const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+      currentRoom = room;
+      currentPlayers = players;
+      gameProperties = updatedProps;
+
+      renderGameHUD();
+      renderProperties();
+      renderSellProperties();
+    } catch (err) {
+      showAlert(err.message || 'Failed to list property.');
+      btnConfirmListProperty.disabled = false;
+      btnConfirmListProperty.textContent = 'List for Sale';
     }
   });
 }
@@ -880,7 +1143,8 @@ function setupRealtimeSubscription(roomId) {
           renderGameHUD();
           renderProperties();
           if (currentGameSubpage === 'make-payments') renderMortgagePayments();
-        if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
+          if (currentGameSubpage === 'sell-properties') renderSellProperties();
+          if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
         } else {
           renderSeats();
         }
@@ -909,6 +1173,7 @@ function setupRealtimeSubscription(roomId) {
         renderGameHUD();
         renderProperties();
         if (currentGameSubpage === 'make-payments') renderMortgagePayments();
+        if (currentGameSubpage === 'sell-properties') renderSellProperties();
         if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
       } catch (err) {
         console.error('Error refreshing properties:', err);
@@ -1127,13 +1392,7 @@ if (cardNavBuyProperties) {
 }
 
 if (cardNavSellProperties) {
-  cardNavSellProperties.addEventListener('click', () =>
-    showGameSubpage('placeholder', {
-      title: 'Sell Properties',
-      icon: '🏷️',
-      desc: 'List properties for sale to other players and the bank. This feature will be introduced in an upcoming phase.'
-    })
-  );
+  cardNavSellProperties.addEventListener('click', () => showGameSubpage('sell-properties'));
   cardNavSellProperties.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') cardNavSellProperties.click();
   });

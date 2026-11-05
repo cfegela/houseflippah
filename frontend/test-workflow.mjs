@@ -194,6 +194,24 @@ async function runTest() {
   if (listErr) throw listErr;
   console.log('   ✓ Listing permitted in subsequent Round 2 for $120,000!');
 
+  // Test delist_property
+  const { data: delistData, error: delistErr } = await p1.client.rpc('delist_property', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave'
+  });
+  if (delistErr) throw delistErr;
+  if (delistData.property.is_listed !== false || delistData.property.list_price !== null) {
+    throw new Error('Expected property to be delisted');
+  }
+  console.log('   ✓ Property successfully delisted via delist_property RPC!');
+
+  // Re-list for remaining test flow
+  await p1.client.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_list_price: 125000
+  });
+
   // Player 1 buys Baltic Ave ($60k, $6k down) in Round 2, then tests skipping payment & foreclosure
   await p1.client.rpc('buy_property', { p_room_id: roomId, p_property_slug: 'baltic-ave' });
 

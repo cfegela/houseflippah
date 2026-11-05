@@ -134,6 +134,19 @@ export async function listProperty(roomId, propertySlug, listPrice) {
 }
 
 /**
+ * Remove a property from the sale listings.
+ */
+export async function delistProperty(roomId, propertySlug) {
+  const { data, error } = await supabase.rpc('delist_property', {
+    p_room_id: roomId,
+    p_property_slug: propertySlug,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
  * End active player turn and advance to the next player.
  */
 export async function endTurn(roomId) {

@@ -162,6 +162,36 @@
         </div>
       </div>
 
+      <!-- List Property Modal -->
+      <div id="list-property-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 480px; text-align: left;">
+          <div style="margin-bottom: 0.75rem;">
+            <h3 style="font-size: 1.35rem; font-weight: 800; margin: 0;">List Property for Sale</h3>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.25rem;">
+            Set your asking price for <strong id="modal-list-property-name" style="color: var(--text-main);">Property</strong> to list it on the marketplace:
+          </p>
+          <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 1.1rem; display: flex; flex-direction: column; gap: 0.6rem; font-size: 0.92rem; margin-bottom: 1.5rem;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--text-muted);">Purchase / Base Value</span>
+              <strong id="modal-list-property-base-cost" style="color: var(--text-main);">$0</strong>
+            </div>
+            <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 0;">
+              <label for="modal-list-price-input" style="font-size: 0.8rem;">Asking Price ($)</label>
+              <input type="number" id="modal-list-price-input" min="1" step="1000" placeholder="e.g. 100000" style="background: #0b1120; border: 1px solid var(--border-color); color: var(--text-main); padding: 0.75rem 1rem; border-radius: 8px; font-size: 1.1rem; font-weight: 700; width: 100%; box-sizing: border-box;" />
+            </div>
+          </div>
+          <div class="actions-row" style="justify-content: flex-end; gap: 0.75rem;">
+            <button id="btn-cancel-list-property" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button id="btn-confirm-list-property" class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7, #2563eb); min-width: 140px;">
+              List for Sale
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- VIEW 2: GAME LOBBY -->
       <main id="lobby-view" class="hidden">
         <div class="card">
@@ -312,6 +342,20 @@
         <section id="game-property-details-view" class="subpage-section hidden">
           <div id="property-details-container" class="property-details-container">
             <!-- Dynamically populated property detail view -->
+          </div>
+        </section>
+
+        <!-- SUBPAGE 2C: SELL PROPERTIES (Portfolio & Resale Listings) -->
+        <section id="game-sell-properties-view" class="subpage-section hidden">
+          <div class="subpage-header">
+            <button class="btn btn-secondary btn-back-to-dashboard">
+              ← Home
+            </button>
+            <h2>Sell Properties</h2>
+          </div>
+
+          <div id="sell-properties-container" class="property-details-container">
+            <!-- Dynamically populated portfolio property cards -->
           </div>
         </section>
 

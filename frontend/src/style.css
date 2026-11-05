@@ -616,8 +616,12 @@ input[type="text"]:focus {
   justify-content: space-between;
   padding: 0.75rem;
   position: relative;
-  background-size: cover;
-  background-position: center;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  overflow: hidden;
+}
+
+.card-img-placeholder svg .svg-bg-rect {
+  display: none;
 }
 
 .card-color-stripe {
@@ -749,11 +753,25 @@ input[type="text"]:focus {
 
 /* Property Details View Styles */
 .property-details-container {
+  width: 100%;
   max-width: 800px;
   margin: 0 auto;
 }
 
+#sell-properties-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  width: 100%;
+}
+
+.property-details-container > .placeholder-card,
+.property-details-container > .card {
+  width: 100%;
+}
+
 .property-detail-card {
+  width: 100%;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
@@ -771,11 +789,31 @@ input[type="text"]:focus {
 .property-detail-hero {
   height: 280px;
   position: relative;
-  background: #090e1a;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.property-detail-hero .property-hero-graphic {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.property-detail-hero svg {
+  width: auto;
+  height: 100%;
+  max-height: 240px;
+  max-width: 100%;
+}
+
+.property-detail-hero svg .svg-bg-rect {
+  display: none;
 }
 
 .property-detail-body {
