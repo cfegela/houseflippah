@@ -93,10 +93,23 @@ export async function startGame(roomId) {
 }
 
 /**
- * Buy a property from the bank.
+ * Buy a property from the bank (10% down financing).
  */
 export async function buyProperty(roomId, propertySlug) {
   const { data, error } = await supabase.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: propertySlug,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Make a manual mortgage payment on a property (1/40th value, or 2x if delinquent).
+ */
+export async function makeMortgagePayment(roomId, propertySlug) {
+  const { data, error } = await supabase.rpc('make_mortgage_payment', {
     p_room_id: roomId,
     p_property_slug: propertySlug,
   });

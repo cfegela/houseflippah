@@ -9,6 +9,7 @@ import {
   subscribeToRoom,
   startGame,
   buyProperty,
+  makeMortgagePayment,
   endTurn,
   fetchGameData,
 } from './supabase.js';
@@ -60,6 +61,7 @@ const btnStartGame = document.getElementById('btn-start-game');
 
 // DOM Elements - Game HUD & Marketplace
 const turnIndicatorBox = document.getElementById('turn-indicator-box');
+const roundNumberDisplay = document.getElementById('round-number-display');
 const turnPlayerDisplay = document.getElementById('turn-player-display');
 const myWalletDisplay = document.getElementById('my-wallet-display');
 const btnEndTurn = document.getElementById('btn-end-turn');
@@ -69,6 +71,8 @@ const propertiesGrid = document.getElementById('properties-grid');
 // DOM Elements - Active Game Subpages & Navigation
 const gameDashboardView = document.getElementById('game-dashboard-view');
 const gameBuyPropertiesView = document.getElementById('game-buy-properties-view');
+const gameMakePaymentsView = document.getElementById('game-make-payments-view');
+const mortgagePaymentsContainer = document.getElementById('mortgage-payments-container');
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -254,20 +258,29 @@ function showLandingView() {
 // Game Subpage Navigation
 function showGameSubpage(subpage, placeholderInfo = null) {
   currentGameSubpage = subpage;
-  if (!gameDashboardView || !gameBuyPropertiesView || !gamePlaceholderView) return;
+  if (!gameDashboardView || !gameBuyPropertiesView || !gamePlaceholderView || !gameMakePaymentsView) return;
 
   if (subpage === 'dashboard') {
     gameDashboardView.classList.remove('hidden');
     gameBuyPropertiesView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
+    gameMakePaymentsView.classList.add('hidden');
   } else if (subpage === 'buy-properties') {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.remove('hidden');
     gamePlaceholderView.classList.add('hidden');
+    gameMakePaymentsView.classList.add('hidden');
     renderProperties();
+  } else if (subpage === 'make-payments') {
+    gameDashboardView.classList.add('hidden');
+    gameBuyPropertiesView.classList.add('hidden');
+    gamePlaceholderView.classList.add('hidden');
+    gameMakePaymentsView.classList.remove('hidden');
+    renderMortgagePayments();
   } else if (subpage === 'placeholder') {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.add('hidden');
+    gameMakePaymentsView.classList.add('hidden');
     gamePlaceholderView.classList.remove('hidden');
     if (placeholderInfo) {
       placeholderHeaderTitle.textContent = placeholderInfo.title;
@@ -308,7 +321,10 @@ function renderGameHUD() {
   const activePlayer = currentPlayers.find((p) => p.seat_number === activeSeat);
   const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
 
-  // Turn Indicator Box
+  // Turn & Round Indicator Box
+  if (roundNumberDisplay && currentRoom) {
+    roundNumberDisplay.textContent = currentRoom.current_round || 1;
+  }
   if (activePlayer) {
     turnPlayerDisplay.textContent = `Seat ${activeSeat}: ${activePlayer.display_name}`;
   } else {
@@ -391,6 +407,9 @@ function renderProperties() {
       <div class="card-body">
         <div class="prop-price">${formatMoney(prop.cost)}</div>
         <div class="prop-specs">${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft</div>
+        <div style="font-size: 0.8rem; color: #38bdf8; font-weight: 600; margin-top: 0.15rem;">
+          10% Down: ${formatMoney((prop.cost * 10) / 100)} • ${formatMoney(prop.cost / 40)}/rd
+        </div>
         <div class="prop-name">${escapeHtml(prop.name)}</div>
       </div>
       <div class="card-footer">
@@ -413,6 +432,7 @@ function renderProperties() {
           gameProperties = updatedProps;
           renderGameHUD();
           renderProperties();
+          if (currentGameSubpage === 'make-payments') renderMortgagePayments();
         } catch (err) {
           showAlert(err.message || 'Failed to purchase property.');
           buyBtn.disabled = false;
@@ -422,6 +442,135 @@ function renderProperties() {
     }
 
     propertiesGrid.appendChild(card);
+  });
+}
+
+// Render Mortgage & Make Payments List
+function renderMortgagePayments() {
+  if (!mortgagePaymentsContainer) return;
+  mortgagePaymentsContainer.innerHTML = '';
+
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser.id);
+  const activeSeat = currentRoom.current_turn_seat || 1;
+  const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
+  const currentRound = currentRoom.current_round || 1;
+
+  // Filter player's owned properties
+  const myProperties = gameProperties.filter((gp) => gp.owner_user_id === currentUser.id);
+
+  if (myProperties.length === 0) {
+    mortgagePaymentsContainer.innerHTML = `
+      <div class="card placeholder-card">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">💳</div>
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.35rem;">No Active Mortgages</h3>
+        <p style="color: var(--text-muted); max-width: 460px; margin: 0 auto 1.5rem auto; line-height: 1.5;">
+          You don't own any properties yet. Head over to <strong>Buy Properties</strong> on your turn to finance your first real estate deed with 10% down!
+        </p>
+        <button class="btn btn-primary" id="btn-goto-buy-properties" style="padding: 0.65rem 1.5rem;">
+          Browse Properties
+        </button>
+      </div>
+    `;
+    const gotoBtn = document.getElementById('btn-goto-buy-properties');
+    if (gotoBtn) gotoBtn.addEventListener('click', () => showGameSubpage('buy-properties'));
+    return;
+  }
+
+  myProperties.forEach((gp) => {
+    const catalog = catalogProperties.find((cp) => cp.slug === gp.property_slug);
+    if (!catalog) return;
+
+    const basePayment = catalog.cost / 40;
+    const isDelinquent = (gp.missed_payments || 0) >= 1;
+    const isPaidThisRound = !isDelinquent && (gp.last_paid_round || 0) >= currentRound;
+    const requiredPayment = isDelinquent ? basePayment * 2 : basePayment;
+
+    const card = document.createElement('div');
+    card.className = `mortgage-card ${isDelinquent ? 'is-delinquent' : ''}`;
+
+    let statusBadge = '';
+    let warningBox = '';
+    let actionBtnHtml = '';
+
+    if (isPaidThisRound) {
+      statusBadge = `<span class="badge badge-paid">PAID FOR ROUND ${currentRound} ✓</span>`;
+      actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Paid for Round ${currentRound}</button>`;
+    } else if (isDelinquent) {
+      statusBadge = `<span class="badge badge-delinquent">⚠️ DELINQUENT • 1 MISSED</span>`;
+      warningBox = `
+        <div class="mortgage-warning-box">
+          <strong>⚠️ Final Foreclosure Warning:</strong> You missed payment last round. Pay double <strong>(${formatMoney(requiredPayment)})</strong> this round to bring your mortgage current, or the bank will foreclose and repossess the property when the round ends!
+        </div>
+      `;
+      if (isMyTurn) {
+        actionBtnHtml = `<button class="btn-pay-mortgage btn-pay-delinquent" data-slug="${catalog.slug}">Pay Double (${formatMoney(requiredPayment)})</button>`;
+      } else {
+        actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Waiting for Turn</button>`;
+      }
+    } else {
+      statusBadge = `<span class="badge badge-due">DUE ROUND ${currentRound}</span>`;
+      if (isMyTurn) {
+        actionBtnHtml = `<button class="btn-pay-mortgage" data-slug="${catalog.slug}">Pay Mortgage (${formatMoney(requiredPayment)})</button>`;
+      } else {
+        actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Waiting for Turn</button>`;
+      }
+    }
+
+    card.innerHTML = `
+      <div class="card-color-stripe" style="background-color: ${catalog.color_hex};"></div>
+      <div class="mortgage-card-header">
+        <div>
+          <h3 style="font-size: 1.25rem; font-weight: 700;">${escapeHtml(catalog.name)}</h3>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(catalog.group_name)}</span>
+        </div>
+        ${statusBadge}
+      </div>
+      <div class="mortgage-card-body">
+        <div class="mortgage-stat">
+          <span class="mortgage-stat-label">Property Value</span>
+          <span class="mortgage-stat-val">${formatMoney(catalog.cost)}</span>
+        </div>
+        <div class="mortgage-stat">
+          <span class="mortgage-stat-label">Round Payment (2.5%)</span>
+          <span class="mortgage-stat-val" style="color: #38bdf8;">${formatMoney(basePayment)}</span>
+        </div>
+        <div class="mortgage-stat">
+          <span class="mortgage-stat-label">Amount Due Now</span>
+          <span class="mortgage-stat-val" style="color: ${isDelinquent ? '#f59e0b' : '#22c55e'};">
+            ${isPaidThisRound ? '$0' : formatMoney(requiredPayment)}
+          </span>
+        </div>
+      </div>
+      ${warningBox}
+      <div class="mortgage-card-footer">
+        ${actionBtnHtml}
+      </div>
+    `;
+
+    // Hook payment button
+    const payBtn = card.querySelector('.btn-pay-mortgage:not(:disabled)');
+    if (payBtn) {
+      payBtn.addEventListener('click', async () => {
+        payBtn.disabled = true;
+        payBtn.textContent = 'Processing Payment...';
+        try {
+          await makeMortgagePayment(currentRoom.id, catalog.slug);
+          const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+          currentRoom = room;
+          currentPlayers = players;
+          gameProperties = updatedProps;
+          renderGameHUD();
+          renderMortgagePayments();
+          renderProperties();
+          showAlert(`Mortgage payment of ${formatMoney(requiredPayment)} processed successfully!`, 'success');
+        } catch (err) {
+          showAlert(err.message || 'Failed to make mortgage payment.');
+          payBtn.disabled = false;
+        }
+      });
+    }
+
+    mortgagePaymentsContainer.appendChild(card);
   });
 }
 
@@ -443,6 +592,7 @@ function setupRealtimeSubscription(roomId) {
         if (currentRoom.status === 'in_progress') {
           renderGameHUD();
           renderProperties();
+          if (currentGameSubpage === 'make-payments') renderMortgagePayments();
         } else {
           renderSeats();
         }
@@ -470,6 +620,7 @@ function setupRealtimeSubscription(roomId) {
         currentPlayers = updatedPlayers;
         renderGameHUD();
         renderProperties();
+        if (currentGameSubpage === 'make-payments') renderMortgagePayments();
       } catch (err) {
         console.error('Error refreshing properties:', err);
       }
@@ -714,13 +865,7 @@ if (cardNavMakeImprovements) {
 }
 
 if (cardNavMakePayments) {
-  cardNavMakePayments.addEventListener('click', () =>
-    showGameSubpage('placeholder', {
-      title: 'Make Payments',
-      icon: '💳',
-      desc: 'Make mortgage payments and avoid foreclosures. This feature will be introduced in an upcoming phase.'
-    })
-  );
+  cardNavMakePayments.addEventListener('click', () => showGameSubpage('make-payments'));
   cardNavMakePayments.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') cardNavMakePayments.click();
   });

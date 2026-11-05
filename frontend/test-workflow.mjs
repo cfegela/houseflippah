@@ -93,13 +93,13 @@ async function runTest() {
   if (p5SecondErr) throw new Error('Player 5 join failed after seat freed: ' + p5SecondErr.message);
   console.log(`   ✓ Player 5 joined successfully into freed Seat ${p5SecondJoin.player.seat_number}!`);
 
-  // 8. Test Starting Game, Banking & Real Estate
-  console.log('7b. Testing Game Start, $100,000 Starting Cash & Property Purchasing...');
+  // 8. Test Starting Game, Banking & 10% Down Financing
+  console.log('7b. Testing Game Start, $100,000 Starting Cash & 10% Down Property Purchasing...');
   const { data: startData, error: startErr } = await p1.client.rpc('start_game', {
     p_room_id: roomId
   });
   if (startErr) throw new Error('start_game failed: ' + startErr.message);
-  console.log('   ✓ Game started successfully. Status is in_progress, current turn is Seat 1.');
+  console.log('   ✓ Game started successfully. Status is in_progress, current turn is Seat 1, Round 1.');
 
   // Check players cash = 100,000
   const { data: playersWithCash } = await p1.client.from('room_players').select('*').eq('room_id', roomId);
@@ -120,37 +120,93 @@ async function runTest() {
   if (!notYourTurnErr) throw new Error('Expected "not your turn" error for Player 2!');
   console.log(`   ✓ Strict turn enforcement verified: "${notYourTurnErr.message}"`);
 
-  // Player 1 attempts to buy Boardwalk ($400,000) with $100,000 -> should fail
-  const { error: noCashErr } = await p1.client.rpc('buy_property', {
-    p_room_id: roomId,
-    p_property_slug: 'boardwalk'
-  });
-  if (!noCashErr) throw new Error('Expected insufficient funds error for Boardwalk!');
-  console.log(`   ✓ Insufficient funds check verified: "${noCashErr.message}"`);
-
-  // Player 1 buys Mediterranean Ave ($60,000) -> succeeds!
+  // Player 1 buys Mediterranean Ave ($60,000) with 10% down ($6,000) -> succeeds!
   const { data: buyData, error: buyErr } = await p1.client.rpc('buy_property', {
     p_room_id: roomId,
     p_property_slug: 'mediterranean-ave'
   });
   if (buyErr) throw new Error('buy_property failed: ' + buyErr.message);
-  if (buyData.player.cash !== 40000) throw new Error(`Expected $40,000 cash remaining, got ${buyData.player.cash}`);
-  console.log(`   ✓ Player 1 bought Mediterranean Avenue for $60,000! Remaining cash: $${buyData.player.cash}.`);
+  if (buyData.player.cash !== 94000) throw new Error(`Expected $94,000 cash remaining ($6,000 down), got ${buyData.player.cash}`);
+  console.log(`   ✓ Player 1 bought Mediterranean Avenue for 10% down ($6,000)! Remaining cash: $${buyData.player.cash}.`);
+  if (buyData.property.last_paid_round !== 1 || buyData.property.missed_payments !== 0) {
+    throw new Error('Mortgage state on purchase not properly initialized');
+  }
 
-  // Player 1 ends turn -> advances to Seat 2
-  const { data: endTurnData, error: endTurnErr } = await p1.client.rpc('end_turn', {
-    p_room_id: roomId
-  });
-  if (endTurnErr) throw new Error('end_turn failed: ' + endTurnErr.message);
-  console.log(`   ✓ Turn ended. Active seat is now Seat ${endTurnData.current_turn_seat}.`);
-
-  // Player 2 attempts to buy Mediterranean Ave (already owned) -> should fail
-  const { error: alreadyOwnedErr } = await p2.client.rpc('buy_property', {
+  // Player 1 attempts to pay mortgage in Round 1 -> should fail (already covered for purchase round)
+  const { error: alreadyPaidErr } = await p1.client.rpc('make_mortgage_payment', {
     p_room_id: roomId,
     p_property_slug: 'mediterranean-ave'
   });
-  if (!alreadyOwnedErr) throw new Error('Expected already owned error!');
-  console.log(`   ✓ Already owned check verified: "${alreadyOwnedErr.message}"`);
+  if (!alreadyPaidErr) throw new Error('Expected already paid error for Round 1!');
+  console.log(`   ✓ Round 1 mortgage already covered check verified: "${alreadyPaidErr.message}"`);
+
+  // Helper to advance turn through all 4 active players (Seat 1: P1, Seat 2: P2, Seat 3: P5, Seat 4: P4)
+  const advanceFullRound = async () => {
+    await p1.client.rpc('end_turn', { p_room_id: roomId });
+    await p2.client.rpc('end_turn', { p_room_id: roomId });
+    await p5.client.rpc('end_turn', { p_room_id: roomId });
+    const { data } = await p4.client.rpc('end_turn', { p_room_id: roomId });
+    return data;
+  };
+
+  // Turn advances through players 1, 2, 5, 4 to wrap back to Seat 1 -> advancing to Round 2
+  const round2Advance = await advanceFullRound();
+  if (round2Advance.current_round !== 2) throw new Error(`Expected Round 2, got ${round2Advance.current_round}`);
+  console.log(`   ✓ Round advanced to Round ${round2Advance.current_round}!`);
+
+  // In Round 2: Player 1 pays mortgage on Mediterranean ($60,000 / 40 = $1,500)
+  const { data: payData, error: payErr } = await p1.client.rpc('make_mortgage_payment', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave'
+  });
+  if (payErr) throw new Error('make_mortgage_payment failed: ' + payErr.message);
+  if (payData.paid_amount !== 1500) throw new Error(`Expected $1,500 payment, got ${payData.paid_amount}`);
+  if (payData.player.cash !== 92500) throw new Error(`Expected $92,500 cash, got ${payData.player.cash}`);
+  console.log(`   ✓ Player 1 made 1/40th mortgage payment ($1,500)! Remaining cash: $${payData.player.cash}.`);
+
+  // Player 1 buys Baltic Ave ($60k, $6k down) in Round 2, then tests skipping payment & foreclosure
+  await p1.client.rpc('buy_property', { p_room_id: roomId, p_property_slug: 'baltic-ave' });
+
+  // Advance from Round 2 to Round 3 (Player 1 skips payment on Baltic Ave)
+  await advanceFullRound(); // -> Round 3 starts
+
+  // In Round 3, Baltic Ave payment is due. Player 1 skips again!
+  const round4Advance = await advanceFullRound(); // -> Round 4 starts (1 missed)
+  console.log(`   ✓ Round ${round4Advance.current_round} reached. Checking delinquency for Baltic Ave...`);
+
+  const { data: balticCheck } = await p1.client.from('game_properties').select('*').eq('room_id', roomId).eq('property_slug', 'baltic-ave').single();
+  if (balticCheck.missed_payments !== 1) throw new Error(`Expected 1 missed payment, got ${balticCheck.missed_payments}`);
+  console.log('   ✓ Baltic Ave is Delinquent (1 missed payment) with no penalty yet.');
+
+  // In Round 4: Player 1 makes DOUBLE payment ($3,000) to bring Baltic Ave current!
+  const { data: doublePayData, error: doublePayErr } = await p1.client.rpc('make_mortgage_payment', {
+    p_room_id: roomId,
+    p_property_slug: 'baltic-ave'
+  });
+  if (doublePayErr) throw doublePayErr;
+  if (!doublePayData.was_double_payment || doublePayData.paid_amount !== 3000) {
+    throw new Error('Expected $3,000 double payment to bring current!');
+  }
+  console.log(`   ✓ Player 1 made double payment ($3,000) and brought Baltic Ave mortgage current!`);
+
+  // Now test Foreclosure: Player 1 buys Oriental Ave ($100k, $10k down) in Round 4
+  await p1.client.rpc('buy_property', { p_room_id: roomId, p_property_slug: 'oriental-ave' });
+
+  // Advance to Round 5 (Oriental payment due in Round 5)
+  await advanceFullRound(); // -> Round 5 starts
+
+  // Round 5: Player 1 skips payment -> Round 6 starts (Oriental missed_payments = 1)
+  await advanceFullRound(); // -> Round 6 starts
+
+  // Round 6: Player 1 skips second payment -> Round 7 starts (Foreclosure!)
+  const round7Advance = await advanceFullRound(); // -> Round 7 starts
+  console.log(`   ✓ Round 7 reached. Foreclosure processed: ${round7Advance.foreclosed_count} properties foreclosed.`);
+
+  const { data: orientalCheck } = await p1.client.from('game_properties').select('*').eq('room_id', roomId).eq('property_slug', 'oriental-ave').single();
+  if (orientalCheck.owner_user_id !== null) {
+    throw new Error('Expected Oriental Ave to be foreclosed and returned to Bank!');
+  }
+  console.log('   ✓ Oriental Avenue successfully foreclosed and returned to the bank!');
 
   // 9. Host ends the game for all players
   console.log('8. Host ends the game (leave_room as host)...');

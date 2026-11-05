@@ -722,6 +722,136 @@ input[type="text"]:focus {
   color: #94a3b8;
 }
 
+/* Mortgage & Make Payments Styles */
+.mortgage-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mortgage-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.2s ease;
+}
+
+.mortgage-card.is-delinquent {
+  border-color: #f59e0b;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
+.mortgage-card-header {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.mortgage-card-body {
+  padding: 1.25rem 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+}
+
+.mortgage-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.mortgage-stat-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.mortgage-stat-val {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.mortgage-warning-box {
+  background: rgba(245, 158, 11, 0.12);
+  border-left: 4px solid #f59e0b;
+  padding: 0.75rem 1.25rem;
+  margin: 0 1.5rem 1rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  color: #fbbf24;
+  line-height: 1.4;
+}
+
+.mortgage-card-footer {
+  padding: 1rem 1.5rem;
+  background: #0f172a;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.badge-paid {
+  background: #16a34a;
+  color: #fff;
+}
+
+.badge-due {
+  background: #0284c7;
+  color: #fff;
+}
+
+.badge-delinquent {
+  background: #d97706;
+  color: #fff;
+  animation: pulse-delinquent 2s infinite ease-in-out;
+}
+
+@keyframes pulse-delinquent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+.btn-pay-mortgage {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pay-mortgage:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-pay-mortgage:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #334155;
+  color: #94a3b8;
+}
+
+.btn-pay-mortgage.btn-pay-delinquent {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000;
+  font-weight: 800;
+}
+
 .game-bottom-bar {
   margin-top: 3.5rem;
   padding-top: 2rem;

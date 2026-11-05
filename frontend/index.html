@@ -167,7 +167,7 @@
         <div class="card game-hud">
           <div class="hud-top-row">
             <div class="turn-indicator-box" id="turn-indicator-box">
-              <span class="hud-label">Current Turn</span>
+              <span class="hud-label">Round <span id="round-number-display">1</span> • Current Turn</span>
               <div class="turn-player-name" id="turn-player-display">Loading...</div>
             </div>
 
@@ -270,7 +270,7 @@
           </div>
         </section>
 
-        <!-- SUBPAGE 3: PLACEHOLDER VIEW (For other 5 pages) -->
+        <!-- SUBPAGE 3: PLACEHOLDER VIEW (For other 4 pages) -->
         <section id="game-placeholder-view" class="subpage-section hidden">
           <div class="subpage-header">
             <button class="btn btn-secondary btn-back-to-dashboard">
@@ -287,6 +287,20 @@
             <span class="badge" style="background: rgba(56, 189, 248, 0.15); color: var(--accent); padding: 0.4rem 1rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.25);">
               Coming Soon
             </span>
+          </div>
+        </section>
+
+        <!-- SUBPAGE 4: MAKE PAYMENTS (Mortgage & Foreclosure Management) -->
+        <section id="game-make-payments-view" class="subpage-section hidden">
+          <div class="subpage-header">
+            <button class="btn btn-secondary btn-back-to-dashboard">
+              ← Home
+            </button>
+            <h2>Make Payments</h2>
+          </div>
+
+          <div id="mortgage-payments-container" class="mortgage-container">
+            <!-- Dynamic mortgage cards -->
           </div>
         </section>
 
