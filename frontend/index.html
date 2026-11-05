@@ -106,6 +106,24 @@
         </div>
       </div>
 
+      <!-- End Game Confirmation Modal -->
+      <div id="end-game-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="text-align: center;">
+          <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: #ef4444;">End Game?</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
+            Are you sure you want to end the game? This will close the room and return all players to the home screen.
+          </p>
+          <div class="actions-row" style="justify-content: center; gap: 1rem;">
+            <button id="btn-cancel-end-game" class="btn btn-secondary" style="min-width: 120px;">
+              Cancel
+            </button>
+            <button id="btn-confirm-end-game" class="btn btn-danger" style="min-width: 120px;">
+              End Game
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- VIEW 2: GAME LOBBY -->
       <main id="lobby-view" class="hidden">
         <div class="card">

@@ -65,6 +65,11 @@ const btnEndTurn = document.getElementById('btn-end-turn');
 const btnGameEnd = document.getElementById('btn-game-end');
 const propertiesGrid = document.getElementById('properties-grid');
 
+// DOM Elements - End Game Modal
+const endGameModal = document.getElementById('end-game-modal');
+const btnCancelEndGame = document.getElementById('btn-cancel-end-game');
+const btnConfirmEndGame = document.getElementById('btn-confirm-end-game');
+
 // Helpers
 function formatMoney(amount) {
   return '$' + Number(amount || 0).toLocaleString('en-US');
@@ -217,6 +222,7 @@ function showLandingView() {
   currentPlayers = [];
   setRoomUrl(null);
   closeQrModal();
+  closeEndGameModal();
 
   document.getElementById('app').classList.remove('in-lobby');
   lobbyView.classList.add('hidden');
@@ -301,8 +307,6 @@ function renderProperties() {
     const isMine = ownerId === currentUser.id;
     const ownerPlayer = isOwned ? currentPlayers.find((p) => p.user_id === ownerId) : null;
 
-    const canAfford = myPlayer && myPlayer.cash >= prop.cost;
-
     const card = document.createElement('div');
     card.className = 'zillow-card';
 
@@ -320,11 +324,7 @@ function renderProperties() {
     let actionBtnHtml = '';
     if (!isOwned) {
       if (isMyTurn) {
-        if (canAfford) {
-          actionBtnHtml = `<button class="btn-buy" data-slug="${prop.slug}">Buy Property (${formatMoney(prop.cost)})</button>`;
-        } else {
-          actionBtnHtml = `<button class="btn-buy" disabled>Need ${formatMoney(prop.cost - myPlayer.cash)} More</button>`;
-        }
+        actionBtnHtml = `<button class="btn-buy" data-slug="${prop.slug}">Buy Property</button>`;
       } else {
         actionBtnHtml = `<button class="btn-buy" disabled>Waiting for Turn</button>`;
       }
@@ -370,7 +370,7 @@ function renderProperties() {
         } catch (err) {
           showAlert(err.message || 'Failed to purchase property.');
           buyBtn.disabled = false;
-          buyBtn.textContent = `Buy Property (${formatMoney(prop.cost)})`;
+          buyBtn.textContent = 'Buy Property';
         }
       });
     }
@@ -595,13 +595,39 @@ btnEndTurn.addEventListener('click', async () => {
   }
 });
 
-btnGameEnd.addEventListener('click', async () => {
+function openEndGameModal() {
+  endGameModal.classList.remove('hidden');
+}
+
+function closeEndGameModal() {
+  endGameModal.classList.add('hidden');
+}
+
+btnGameEnd.addEventListener('click', openEndGameModal);
+btnCancelEndGame.addEventListener('click', closeEndGameModal);
+
+endGameModal.addEventListener('click', (e) => {
+  if (e.target === endGameModal) closeEndGameModal();
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (!endGameModal.classList.contains('hidden')) closeEndGameModal();
+    if (!qrModal.classList.contains('hidden')) closeQrModal();
+  }
+});
+
+btnConfirmEndGame.addEventListener('click', async () => {
   if (!currentRoom) return;
   const wasRoomId = currentRoom.id;
+  btnConfirmEndGame.disabled = true;
+  closeEndGameModal();
   try {
     await leaveRoom(wasRoomId);
   } catch (err) {
     console.error('Error ending game:', err);
+  } finally {
+    btnConfirmEndGame.disabled = false;
   }
   showLandingView();
   showAlert('You ended the game.', 'info');
