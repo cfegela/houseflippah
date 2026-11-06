@@ -350,6 +350,37 @@ input[type="number"] {
   word-break: break-all;
 }
 
+/* Lobby Action Controls */
+.lobby-actions-container {
+  width: 100%;
+}
+
+.lobby-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  width: 100%;
+  align-items: stretch;
+}
+
+.btn-lobby {
+  padding: 0.65rem 0.25rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+@media (min-width: 480px) {
+  .btn-lobby {
+    padding: 0.75rem 0.75rem;
+    font-size: 0.92rem;
+    gap: 0.5rem;
+  }
+}
+
 /* Alerts / Notification */
 .alert {
   padding: 0.75rem 1rem;
@@ -424,9 +455,7 @@ input[type="number"] {
   gap: 1.25rem;
   background: #0f172a;
   border: 1px solid var(--border-color);
-  position: sticky;
-  top: 1rem;
-  z-index: 100;
+  position: relative;
   backdrop-filter: blur(8px);
 }
 
@@ -1251,11 +1280,11 @@ input[type="number"] {
 }
 
 .game-bottom-bar {
-  margin-top: 3.5rem;
-  padding-top: 2rem;
+  margin-top: 2.5rem;
   margin-bottom: 2.5rem;
-  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
   align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }

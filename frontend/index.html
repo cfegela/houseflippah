@@ -245,25 +245,23 @@
           </div>
 
           <!-- Lobby Action Buttons -->
-          <div class="actions-row" style="margin-top: 1.5rem; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <!-- Lower Left: Host Invite Controls -->
-            <div id="host-invite-controls" class="hidden" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button id="btn-copy-link" class="btn btn-secondary">
-                Copy Invite Link
+          <div class="lobby-actions-container" style="margin-top: 1.5rem;">
+            <!-- Host Controls: 3 buttons side-by-side even on mobile -->
+            <div id="host-invite-controls" class="lobby-buttons-grid hidden">
+              <button id="btn-copy-link" class="btn btn-secondary btn-lobby">
+                Invite Link
               </button>
-              <button id="btn-show-qr" class="btn btn-secondary">
-                Show QR Code
+              <button id="btn-show-qr" class="btn btn-secondary btn-lobby">
+                QR Code
+              </button>
+              <button id="btn-start-game" class="btn btn-primary btn-lobby hidden" disabled>
+                Start Game
               </button>
             </div>
 
-            <!-- Lower Right: Game Controls -->
-            <div style="display: flex; gap: 0.75rem; align-items: center; margin-left: auto;">
-              <span id="lobby-wait-msg" class="hidden" style="color: var(--text-muted); font-size: 0.9rem;">
-                Waiting for host to start the game...
-              </span>
-              <button id="btn-start-game" class="btn btn-primary hidden" disabled>
-                Start Game
-              </button>
+            <!-- Non-Host Controls -->
+            <div id="lobby-wait-msg" class="hidden" style="text-align: center; color: var(--text-muted); font-size: 0.95rem; padding: 0.5rem 0;">
+              Waiting for host to start the game...
             </div>
           </div>
         </div>
@@ -279,11 +277,6 @@
               <div class="turn-indicator-box" id="turn-indicator-box">
                 <span class="hud-label">Round <span id="round-number-display">1</span> • Current Turn</span>
                 <div class="turn-player-name" id="turn-player-display">Loading...</div>
-              </div>
-
-              <div class="wallet-box">
-                <span class="hud-label">Bank Account</span>
-                <div class="wallet-amount" id="my-wallet-display">$100,000</div>
               </div>
 
               <div class="hud-actions">
@@ -302,7 +295,7 @@
                 <span class="dashboard-card-arrow">→</span>
               </div>
               <p class="dashboard-card-desc">
-                Browse the market and purchase bank-owned properties.
+                Browse the market and purchase properties.
               </p>
             </div>
 

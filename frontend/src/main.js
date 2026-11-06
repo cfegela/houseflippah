@@ -434,8 +434,8 @@ function renderGameHUD() {
     btnEndTurn.title = 'Waiting for your turn';
   }
 
-  // Wallet
-  if (myPlayer) {
+  // Wallet (if present)
+  if (myPlayer && myWalletDisplay) {
     myWalletDisplay.textContent = formatMoney(myPlayer.cash);
   }
 
@@ -1487,7 +1487,6 @@ function setupRealtimeSubscription(roomId) {
         const { room: latestRoom, players: updatedPlayers } = await fetchRoom(roomId);
         if (latestRoom.status === 'abandoned') {
           showLandingView();
-          showAlert('The game was ended by the host.', 'info');
           return;
         }
         currentPlayers = updatedPlayers;
@@ -1506,7 +1505,6 @@ function setupRealtimeSubscription(roomId) {
         }
       } catch (err) {
         showLandingView();
-        showAlert('The game was ended by the host.', 'info');
       }
     },
     async (roomChange) => {
@@ -1516,7 +1514,6 @@ function setupRealtimeSubscription(roomId) {
           await loadAndShowGameView();
         } else if (currentRoom.status === 'abandoned') {
           showLandingView();
-          showAlert('The game was ended by the host.', 'info');
         }
       }
     },
