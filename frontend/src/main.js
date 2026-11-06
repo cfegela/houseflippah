@@ -26,6 +26,85 @@ let gameProperties = [];
 let currentGameSubpage = 'dashboard';
 let selectedPropertySlug = null;
 let unsubscribeRealtime = null;
+let lastKnownTurnKey = null;
+
+// Audio Alert System (Web Audio API)
+let audioCtx = null;
+
+function getAudioContext() {
+  if (!audioCtx && typeof window !== 'undefined') {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  return audioCtx;
+}
+
+function unlockAudio() {
+  const ctx = getAudioContext();
+  if (ctx) {
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    // Warm up audio buffer for iOS/mobile Web Audio activation
+    try {
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch (_) {}
+  }
+}
+
+if (typeof window !== 'undefined') {
+  ['click', 'touchstart', 'pointerdown', 'keydown'].forEach((eventName) => {
+    window.addEventListener(eventName, unlockAudio, { passive: true });
+  });
+}
+
+async function playTurnChime() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      await ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+    // Pleasant ascending melodic chime: C5 (523Hz) -> E5 (659Hz) -> G5 (784Hz)
+    const notes = [
+      { freq: 523.25, time: now, dur: 0.3, peak: 0.18 },
+      { freq: 659.25, time: now + 0.09, dur: 0.3, peak: 0.2 },
+      { freq: 783.99, time: now + 0.18, dur: 0.55, peak: 0.25 },
+    ];
+
+    notes.forEach(({ freq, time, dur, peak }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, time);
+
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(peak, time + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(time);
+      osc.stop(time + dur);
+    });
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([60, 40, 60]);
+    }
+  } catch (err) {
+    console.warn('Could not play turn chime:', err);
+  }
+}
 
 // DOM Elements - Alerts
 const alertBox = document.getElementById('alert-box');
@@ -215,7 +294,7 @@ function getPropertySvgPlaceholder(colorHex) {
 // Render Seats UI for Lobby
 function renderSeats() {
   seatsGrid.innerHTML = '';
-  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser.id);
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
 
   playerCountEl.textContent = currentPlayers.length;
 
@@ -295,6 +374,7 @@ function showLandingView() {
   }
   currentRoom = null;
   currentPlayers = [];
+  lastKnownTurnKey = null;
   currentGameSubpage = 'dashboard';
   setRoomUrl(null);
   closeQrModal();
@@ -409,7 +489,7 @@ async function loadAndShowGameView() {
 
 // Render HUD (Turn indicator, wallet balance, scoreboard)
 function renderGameHUD() {
-  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser.id);
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   const activeSeat = currentRoom.current_turn_seat || 1;
   const activePlayer = currentPlayers.find((p) => p.seat_number === activeSeat);
   const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
@@ -428,6 +508,12 @@ function renderGameHUD() {
     turnIndicatorBox.classList.add('is-my-turn');
     btnEndTurn.disabled = false;
     btnEndTurn.title = 'Pass turn to next player';
+
+    const currentTurnKey = `${currentRoom.current_round || 1}:${activeSeat}`;
+    if (lastKnownTurnKey !== currentTurnKey) {
+      lastKnownTurnKey = currentTurnKey;
+      playTurnChime();
+    }
   } else {
     turnIndicatorBox.classList.remove('is-my-turn');
     btnEndTurn.disabled = true;
@@ -1325,7 +1411,7 @@ function renderMortgagePayments() {
   if (!mortgagePaymentsContainer) return;
   mortgagePaymentsContainer.innerHTML = '';
 
-  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser.id);
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   const activeSeat = currentRoom.current_turn_seat || 1;
   const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
   const currentRound = currentRoom.current_round || 1;
@@ -1678,6 +1764,7 @@ qrModal.addEventListener('click', (e) => {
 // Host Starts Game
 btnStartGame.addEventListener('click', async () => {
   if (!currentRoom) return;
+  unlockAudio();
   btnStartGame.disabled = true;
   try {
     await startGame(currentRoom.id);
@@ -1691,6 +1778,7 @@ btnStartGame.addEventListener('click', async () => {
 // Gameplay HUD Actions
 btnEndTurn.addEventListener('click', async () => {
   if (!currentRoom) return;
+  unlockAudio();
   btnEndTurn.disabled = true;
   try {
     const { room } = await endTurn(currentRoom.id);
