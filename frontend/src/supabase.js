@@ -11,10 +11,18 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
  */
 export async function ensureAnonymousSession() {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw sessionError;
+  if (sessionError) {
+    await supabase.auth.signOut().catch(() => {});
+  }
 
   if (session?.user) {
-    return session.user;
+    // Validate that the user actually exists on the backend (e.g. after database resets)
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (!userError && userData?.user) {
+      return userData.user;
+    }
+    // Stale session detected; clear it
+    await supabase.auth.signOut().catch(() => {});
   }
 
   const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
@@ -28,9 +36,20 @@ export async function ensureAnonymousSession() {
  */
 export async function createRoom(displayName) {
   await ensureAnonymousSession();
-  const { data, error } = await supabase.rpc('create_room', {
+  let { data, error } = await supabase.rpc('create_room', {
     p_display_name: displayName.trim(),
   });
+
+  // Self-heal if the session was invalidated or stale
+  if (error && error.message?.includes('foreign key constraint')) {
+    await supabase.auth.signOut().catch(() => {});
+    await ensureAnonymousSession();
+    const retry = await supabase.rpc('create_room', {
+      p_display_name: displayName.trim(),
+    });
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) throw error;
   return data;
@@ -41,10 +60,22 @@ export async function createRoom(displayName) {
  */
 export async function joinRoom(roomId, displayName) {
   await ensureAnonymousSession();
-  const { data, error } = await supabase.rpc('join_room', {
+  let { data, error } = await supabase.rpc('join_room', {
     p_room_id: roomId,
     p_display_name: displayName.trim(),
   });
+
+  // Self-heal if the session was invalidated or stale
+  if (error && error.message?.includes('foreign key constraint')) {
+    await supabase.auth.signOut().catch(() => {});
+    await ensureAnonymousSession();
+    const retry = await supabase.rpc('join_room', {
+      p_room_id: roomId,
+      p_display_name: displayName.trim(),
+    });
+    data = retry.data;
+    error = retry.error;
+  }
 
   if (error) throw error;
   return data;
@@ -140,6 +171,20 @@ export async function delistProperty(roomId, propertySlug) {
   const { data, error } = await supabase.rpc('delist_property', {
     p_room_id: roomId,
     p_property_slug: propertySlug,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Install an improvement on an owned property.
+ */
+export async function makeImprovement(roomId, propertySlug, improvementKey) {
+  const { data, error } = await supabase.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: propertySlug,
+    p_improvement_key: improvementKey,
   });
 
   if (error) throw error;

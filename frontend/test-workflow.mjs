@@ -131,6 +131,10 @@ async function runTest() {
   if (buyData.property.last_paid_round !== 1 || buyData.property.missed_payments !== 0) {
     throw new Error('Mortgage state on purchase not properly initialized');
   }
+  if (buyData.property.purchase_price !== 60000 || buyData.property.market_value !== 60000 || !Array.isArray(buyData.property.improvements)) {
+    throw new Error('Purchase price, market value, or improvements on purchase not properly initialized');
+  }
+  console.log(`   ✓ Purchase price ($60,000) & initial Market Value ($60,000) verified on deed.`);
 
   // Enforce Rule 2: Cannot buy a second property in the same round
   const { error: secondBuyErr } = await p1.client.rpc('buy_property', {
@@ -152,6 +156,17 @@ async function runTest() {
     throw new Error('Expected same round listing restriction error!');
   }
   console.log(`   ✓ Same round listing restriction enforced: "${sameRoundListErr.message}"`);
+
+  // Player 1 attempts to make improvement in Round 1 -> should fail (cannot improve in purchase round)
+  const { error: sameRoundImpErr } = await p1.client.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_improvement_key: 'windows_doors'
+  });
+  if (!sameRoundImpErr || !sameRoundImpErr.message.includes('same round')) {
+    throw new Error('Expected same round improvement restriction error!');
+  }
+  console.log(`   ✓ Same round improvement restriction enforced: "${sameRoundImpErr.message}"`);
 
   // Player 1 attempts to pay mortgage in Round 1 -> should fail (already covered for purchase round)
   const { error: alreadyPaidErr } = await p1.client.rpc('make_mortgage_payment', {
@@ -185,14 +200,101 @@ async function runTest() {
   if (payData.player.cash !== 92500) throw new Error(`Expected $92,500 cash, got ${payData.player.cash}`);
   console.log(`   ✓ Player 1 made 1/40th mortgage payment ($1,500)! Remaining cash: $${payData.player.cash}.`);
 
-  // In Round 2: Listing Mediterranean Ave is now permitted because purchased_round (1) < current_round (2)
+  // Test Make Improvements in Round 2:
+  // Mediterranean purchase_price = $60,000. Cost = $6,000 (10%), Boost = $12,000 (20%).
+  const { data: imp1Data, error: imp1Err } = await p1.client.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_improvement_key: 'windows_doors'
+  });
+  if (imp1Err) throw imp1Err;
+  if (imp1Data.cost !== 6000 || imp1Data.boost !== 12000) {
+    throw new Error(`Unexpected improvement cost or boost returned: cost=${imp1Data.cost}, boost=${imp1Data.boost}`);
+  }
+  if (imp1Data.property.market_value !== 72000) {
+    throw new Error(`Expected market_value $72,000, got ${imp1Data.property.market_value}`);
+  }
+  if (!imp1Data.property.improvements.includes('windows_doors')) {
+    throw new Error('Expected windows_doors in improvements array');
+  }
+  if (imp1Data.player.cash !== 86500) {
+    throw new Error(`Expected $86,500 cash after 1st improvement, got ${imp1Data.player.cash}`);
+  }
+  console.log('   ✓ Installed "windows_doors": Cost $6,000, Market Value increased to $72,000!');
+
+  // Test duplicate improvement restriction
+  const { error: dupImpErr } = await p1.client.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_improvement_key: 'windows_doors'
+  });
+  if (!dupImpErr || !dupImpErr.message.includes('already been installed')) {
+    throw new Error('Expected duplicate improvement error!');
+  }
+  console.log(`   ✓ Duplicate improvement prevented: "${dupImpErr.message}"`);
+
+  // Test invalid improvement key restriction
+  const { error: invalidImpErr } = await p1.client.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_improvement_key: 'swimming_pool'
+  });
+  if (!invalidImpErr || !invalidImpErr.message.includes('Invalid improvement')) {
+    throw new Error('Expected invalid improvement key error!');
+  }
+  console.log(`   ✓ Invalid improvement key prevented: "${invalidImpErr.message}"`);
+
+  // Install remaining 4 improvements in the same round (testing all 5 in one round)
+  const remainingImprovements = ['hvac_mechanicals', 'roof_siding', 'flooring_painting', 'kitchen_baths'];
+  for (const impKey of remainingImprovements) {
+    const { error } = await p1.client.rpc('make_improvement', {
+      p_room_id: roomId,
+      p_property_slug: 'mediterranean-ave',
+      p_improvement_key: impKey
+    });
+    if (error) throw new Error(`Failed to install ${impKey}: ${error.message}`);
+  }
+
+  // Verify final fully renovated property
+  const { data: finalMedCheck } = await p1.client
+    .from('game_properties')
+    .select('*')
+    .eq('room_id', roomId)
+    .eq('property_slug', 'mediterranean-ave')
+    .single();
+  if (finalMedCheck.improvements.length !== 5) {
+    throw new Error(`Expected 5 improvements, got ${finalMedCheck.improvements.length}`);
+  }
+  if (finalMedCheck.market_value !== 120000) {
+    throw new Error(`Expected market_value $120,000 (2x / +100%), got ${finalMedCheck.market_value}`);
+  }
+  console.log('   ✓ Successfully installed all 5 improvements in Round 2! Market value doubled from $60,000 to $120,000 (Max Upgraded)!');
+
+  // Rule test: Player 1 cannot list Mediterranean in Round 2 because improvements were made in Round 2!
+  const { error: listAfterImpErr } = await p1.client.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_list_price: 125000
+  });
+  if (!listAfterImpErr || !listAfterImpErr.message.includes('same round improvements were made')) {
+    throw new Error('Expected same round improve & list restriction error!');
+  }
+  console.log(`   ✓ Same round improve & list restriction enforced: "${listAfterImpErr.message}"`);
+
+  // Player 1 buys Baltic Ave ($60k, $6k down) in Round 2, then tests skipping payment & foreclosure
+  await p1.client.rpc('buy_property', { p_room_id: roomId, p_property_slug: 'baltic-ave' });
+
+  // Advance from Round 2 to Round 3 (Player 1 skips payment on Baltic Ave)
+  await advanceFullRound(); // -> Round 3 starts
+
+  // In Round 3: Listing Mediterranean Ave is now permitted because last_improved_round (2) < current_round (3)
   const { data: listData, error: listErr } = await p1.client.rpc('list_property', {
     p_room_id: roomId,
     p_property_slug: 'mediterranean-ave',
-    p_list_price: 120000
+    p_list_price: 125000
   });
   if (listErr) throw listErr;
-  console.log('   ✓ Listing permitted in subsequent Round 2 for $120,000!');
+  console.log('   ✓ Listing permitted in subsequent Round 3 for $125,000!');
 
   // Test delist_property
   const { data: delistData, error: delistErr } = await p1.client.rpc('delist_property', {
@@ -205,18 +307,39 @@ async function runTest() {
   }
   console.log('   ✓ Property successfully delisted via delist_property RPC!');
 
-  // Re-list for remaining test flow
+  // Test listing and improving same round restrictions on Baltic Ave (purchased Round 2, now Round 3):
   await p1.client.rpc('list_property', {
     p_room_id: roomId,
-    p_property_slug: 'mediterranean-ave',
-    p_list_price: 125000
+    p_property_slug: 'baltic-ave',
+    p_list_price: 100000
   });
 
-  // Player 1 buys Baltic Ave ($60k, $6k down) in Round 2, then tests skipping payment & foreclosure
-  await p1.client.rpc('buy_property', { p_room_id: roomId, p_property_slug: 'baltic-ave' });
+  // Attempt to improve actively listed property
+  const { error: improveListedErr } = await p1.client.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: 'baltic-ave',
+    p_improvement_key: 'windows_doors'
+  });
+  if (!improveListedErr || !improveListedErr.message.includes('actively listed')) {
+    throw new Error('Expected actively listed improvement restriction error!');
+  }
+  console.log(`   ✓ Actively listed improvement restriction enforced: "${improveListedErr.message}"`);
 
-  // Advance from Round 2 to Round 3 (Player 1 skips payment on Baltic Ave)
-  await advanceFullRound(); // -> Round 3 starts
+  // Delist Baltic Ave and attempt to improve in the same round it was listed
+  await p1.client.rpc('delist_property', {
+    p_room_id: roomId,
+    p_property_slug: 'baltic-ave'
+  });
+
+  const { error: improveSameRoundListedErr } = await p1.client.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: 'baltic-ave',
+    p_improvement_key: 'windows_doors'
+  });
+  if (!improveSameRoundListedErr || !improveSameRoundListedErr.message.includes('same round it was listed')) {
+    throw new Error('Expected same round listed improvement restriction error!');
+  }
+  console.log(`   ✓ Same round listed improvement restriction enforced: "${improveSameRoundListedErr.message}"`);
 
   // In Round 3, Baltic Ave payment is due. Player 1 skips again!
   const round4Advance = await advanceFullRound(); // -> Round 4 starts (1 missed)
@@ -258,13 +381,26 @@ async function runTest() {
   }
   console.log('   ✓ Player 1 made double payment ($3,000) and brought Baltic Ave mortgage current!');
 
-  // Now test Foreclosure: Player 1 buys Oriental Ave ($100k, $10k down) in Round 5
+  // Now test Foreclosure & Distressed Asset Improvement Preservation:
+  // Player 1 buys Oriental Ave ($100k, $10k down) in Round 5
   await p1.client.rpc('buy_property', { p_room_id: roomId, p_property_slug: 'oriental-ave' });
 
-  // Advance to Round 6 (Oriental payment due in Round 6)
+  // Advance to Round 6
   await advanceFullRound(); // -> Round 6 starts
 
-  // Round 6: Player 1 skips payment -> Round 7 starts (Oriental missed_payments = 1)
+  // In Round 6: Player 1 installs "windows_doors" on Oriental Ave ($10,000 cost, +$20,000 boost -> $120,000 market value)
+  const { data: orientalImpData, error: orientalImpErr } = await p1.client.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: 'oriental-ave',
+    p_improvement_key: 'windows_doors'
+  });
+  if (orientalImpErr) throw orientalImpErr;
+  if (orientalImpData.property.market_value !== 120000) {
+    throw new Error(`Expected Oriental Ave market value $120,000, got ${orientalImpData.property.market_value}`);
+  }
+  console.log('   ✓ Player 1 installed "windows_doors" on Oriental Ave (Market value boosted to $120,000).');
+
+  // Player 1 skips mortgage payment in Round 6 -> Round 7 starts (Oriental missed_payments = 1)
   await advanceFullRound(); // -> Round 7 starts
 
   // Round 7: Player 1 skips second payment -> Round 8 starts (Foreclosure!)
@@ -275,7 +411,30 @@ async function runTest() {
   if (orientalCheck.owner_user_id !== null) {
     throw new Error('Expected Oriental Ave to be foreclosed and returned to Bank!');
   }
-  console.log('   ✓ Oriental Avenue successfully foreclosed and returned to the bank!');
+  if (orientalCheck.purchase_price !== 100000) {
+    throw new Error(`Expected purchase_price reset to $100,000, got ${orientalCheck.purchase_price}`);
+  }
+  if (!orientalCheck.improvements.includes('windows_doors') || orientalCheck.improvements.length !== 1) {
+    throw new Error('Expected foreclosure to preserve existing improvements!');
+  }
+  if (orientalCheck.market_value !== 120000) {
+    throw new Error(`Expected foreclosure to maintain elevated market value $120,000, got ${orientalCheck.market_value}`);
+  }
+  console.log('   ✓ Foreclosure successfully preserved "windows_doors" improvement and $120,000 elevated market value!');
+
+  // In Round 8: Player 1 buys back the foreclosed Oriental Ave at base bank price ($100k, $10k down)
+  const { data: buyBackData, error: buyBackErr } = await p1.client.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: 'oriental-ave'
+  });
+  if (buyBackErr) throw buyBackErr;
+  if (buyBackData.property.market_value !== 120000) {
+    throw new Error(`Expected bought-back property to retain $120,000 market value, got ${buyBackData.property.market_value}`);
+  }
+  if (!buyBackData.property.improvements.includes('windows_doors')) {
+    throw new Error('Expected bought-back property to retain "windows_doors" improvement');
+  }
+  console.log('   ✓ Player 1 bought foreclosed Oriental Ave at base price ($100,000) with improvements & $120,000 market value intact!');
 
   // 9. Host ends the game for all players
   console.log('8. Host ends the game (leave_room as host)...');

@@ -11,6 +11,7 @@ import {
   buyProperty,
   listProperty,
   delistProperty,
+  makeImprovement,
   makeMortgagePayment,
   endTurn,
   fetchGameData,
@@ -78,8 +79,19 @@ const gamePropertyDetailsView = document.getElementById('game-property-details-v
 const propertyDetailsContainer = document.getElementById('property-details-container');
 const gameSellPropertiesView = document.getElementById('game-sell-properties-view');
 const sellPropertiesContainer = document.getElementById('sell-properties-container');
+const gameMakeImprovementsView = document.getElementById('game-make-improvements-view');
+const makeImprovementsContainer = document.getElementById('make-improvements-container');
 const gameMakePaymentsView = document.getElementById('game-make-payments-view');
 const mortgagePaymentsContainer = document.getElementById('mortgage-payments-container');
+
+// Improvements Catalog Definition
+const IMPROVEMENTS_CATALOG = [
+  { key: 'windows_doors', name: 'Windows & Doors', icon: '🪟', desc: 'Energy-efficient insulated windows and modern entry doors.' },
+  { key: 'hvac_mechanicals', name: 'HVAC & Mechanicals', icon: '❄️', desc: 'High-efficiency heat pump, ductwork, and electrical panel upgrade.' },
+  { key: 'roof_siding', name: 'Roof & Siding', icon: '🏠', desc: 'Architectural shingles and durable weather-resistant siding.' },
+  { key: 'flooring_painting', name: 'Flooring & Painting', icon: '🎨', desc: 'Hardwood refinishing, luxury vinyl tile, and interior/exterior paint.' },
+  { key: 'kitchen_baths', name: 'Kitchen & Baths', icon: '🍳', desc: 'Quartz countertops, custom cabinetry, tile showers, and fixtures.' }
+];
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -294,6 +306,7 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
     if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
   } else if (subpage === 'buy-properties') {
@@ -301,6 +314,7 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gameBuyPropertiesView.classList.remove('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
     if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
     renderProperties();
@@ -309,6 +323,7 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.remove('hidden');
     if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
     if (selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
@@ -317,14 +332,25 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
     if (gameSellPropertiesView) gameSellPropertiesView.classList.remove('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
     renderSellProperties();
+  } else if (subpage === 'make-improvements') {
+    gameDashboardView.classList.add('hidden');
+    gameBuyPropertiesView.classList.add('hidden');
+    if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.remove('hidden');
+    gamePlaceholderView.classList.add('hidden');
+    gameMakePaymentsView.classList.add('hidden');
+    renderMakeImprovements();
   } else if (subpage === 'make-payments') {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
     if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.add('hidden');
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.remove('hidden');
     renderMortgagePayments();
@@ -333,6 +359,7 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gameBuyPropertiesView.classList.add('hidden');
     if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
     if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
     gamePlaceholderView.classList.remove('hidden');
     if (placeholderInfo) {
@@ -442,9 +469,15 @@ function renderProperties() {
     card.style.cursor = 'pointer';
 
     // Image & Status Header
-    let statusBadgeHtml = isResale
-      ? `<span class="listing-badge" style="background: #0284c7; color: #fff;">RESALE</span>`
-      : `<span class="listing-badge badge-for-sale">FOR SALE</span>`;
+    const installedImprovements = Array.isArray(gp?.improvements) ? gp.improvements : [];
+    let statusBadgeHtml = '';
+    if (isResale) {
+      statusBadgeHtml = `<span class="listing-badge" style="background: #0284c7; color: #fff;">RESALE</span>`;
+    } else if (installedImprovements.length > 0) {
+      statusBadgeHtml = `<span class="listing-badge" style="background: #16a34a; color: #fff;">UPGRADED (${installedImprovements.length})</span>`;
+    } else {
+      statusBadgeHtml = `<span class="listing-badge badge-for-sale">FOR SALE</span>`;
+    }
 
     const actionBtnHtml = `
       <button class="btn-view-property" data-slug="${prop.slug}">
@@ -519,17 +552,22 @@ function renderPropertyDetails(slug) {
   const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
 
   const totalCost = prop.cost;
-  const downPayment = (totalCost * 10) / 100;
-  const roundMortgage = totalCost / 40;
+  const purchasePrice = gp?.purchase_price || totalCost;
+  const marketValue = gp?.market_value || totalCost;
+  const downPayment = (purchasePrice * 10) / 100;
+  const roundMortgage = purchasePrice / 40;
   const canAfford = myPlayer && myPlayer.cash >= downPayment;
   const currentRound = currentRoom?.current_round || 1;
   const hasPurchasedThisRound = gameProperties.some(
     (g) => g.owner_user_id === currentUser?.id && g.purchased_round === currentRound
   );
 
+  const installedImprovements = Array.isArray(gp?.improvements) ? gp.improvements : [];
   let statusBadgeHtml = '';
   if (!isBankOwned && !isOwnedByMe) {
     statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #475569; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">OWNED BY SEAT ${ownerPlayer?.seat_number || '?'} (${escapeHtml(ownerPlayer?.display_name || 'Player')})</span></div>`;
+  } else if (isBankOwned && installedImprovements.length > 0) {
+    statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #16a34a; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">UPGRADED (${installedImprovements.length} of 5)</span></div>`;
   }
 
   let actionHtml = '';
@@ -595,12 +633,15 @@ function renderPropertyDetails(slug) {
 
       <div class="property-detail-grid">
         <div class="property-detail-stat">
-          <span class="property-detail-stat-label">Total List Price</span>
-          <span class="property-detail-stat-val">${formatMoney(totalCost)}</span>
+          <span class="property-detail-stat-label">Market Value</span>
+          <span class="property-detail-stat-val" style="color: #22c55e;">
+            ${formatMoney(marketValue)}
+            ${marketValue > totalCost ? `<span style="font-size: 0.8rem; font-weight: 600; opacity: 0.9; margin-left: 4px;">(+${Math.round(((marketValue - totalCost) / totalCost) * 100)}%)</span>` : ''}
+          </span>
         </div>
         <div class="property-detail-stat">
-          <span class="property-detail-stat-label">10% Down Payment</span>
-          <span class="property-detail-stat-val accent">${formatMoney(downPayment)}</span>
+          <span class="property-detail-stat-label">${isBankOwned ? 'Purchase Price (Bank)' : 'Purchase Price'}</span>
+          <span class="property-detail-stat-val ${isBankOwned ? 'accent' : ''}">${formatMoney(isBankOwned ? totalCost : purchasePrice)}</span>
         </div>
         <div class="property-detail-stat">
           <span class="property-detail-stat-label">Mortgage / Round</span>
@@ -614,6 +655,20 @@ function renderPropertyDetails(slug) {
         </div>
       </div>
     </div>
+
+    ${installedImprovements.length > 0 ? `
+      <div class="improvements-section" style="padding: 1.25rem 2rem; background: rgba(15, 23, 42, 0.3); border-top: 1px solid var(--border-color);">
+        <div class="improvements-header" style="margin-bottom: 0.65rem;">
+          <h4 style="font-size: 1rem; margin: 0;">🔨 Included Improvements (${installedImprovements.length} of 5)</h4>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          ${installedImprovements.map((k) => {
+            const cat = IMPROVEMENTS_CATALOG.find((c) => c.key === k);
+            return `<span class="badge-installed">${cat ? cat.icon + ' ' + escapeHtml(cat.name) : k}</span>`;
+          }).join('')}
+        </div>
+      </div>
+    ` : ''}
 
     <div class="property-detail-actions">
       <button class="btn-detail-back" id="btn-detail-back-bottom">
@@ -651,10 +706,13 @@ function openPurchaseModal(prop) {
   if (!prop || !currentRoom) return;
   pendingPurchaseProperty = prop;
 
+  const gp = gameProperties.find((g) => g.property_slug === prop.slug);
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   const totalCost = prop.cost;
-  const downPayment = (totalCost * 10) / 100;
-  const roundMortgage = totalCost / 40;
+  const purchasePrice = gp?.purchase_price || totalCost;
+  const marketValue = gp?.market_value || totalCost;
+  const downPayment = (purchasePrice * 10) / 100;
+  const roundMortgage = purchasePrice / 40;
   const remainingCash = (myPlayer?.cash || 0) - downPayment;
 
   if (modalPropertyName) modalPropertyName.textContent = prop.name;
@@ -754,9 +812,12 @@ function renderSellProperties() {
     if (!prop) return;
 
     const totalCost = prop.cost;
-    const downPayment = (totalCost * 10) / 100;
-    const roundMortgage = totalCost / 40;
+    const purchasePrice = gp.purchase_price || totalCost;
+    const marketValue = gp.market_value || purchasePrice;
+    const downPayment = (purchasePrice * 10) / 100;
+    const roundMortgage = purchasePrice / 40;
     const isPurchasedThisRound = gp.purchased_round === currentRound;
+    const isImprovedThisRound = gp.last_improved_round === currentRound;
     const isListed = !!gp.is_listed;
 
     let statusBadgeHtml = '';
@@ -794,6 +855,12 @@ function renderSellProperties() {
               List Property
             </button>
           `;
+        } else if (isImprovedThisRound) {
+          actionBtnHtml = `
+            <button class="btn-detail-buy" disabled title="You cannot make improvements and list the same property in the same round (Eligible Round ${currentRound + 1})">
+              List Property
+            </button>
+          `;
         } else {
           actionBtnHtml = `
             <button class="btn-detail-buy btn-open-list-modal" data-slug="${prop.slug}">
@@ -826,12 +893,12 @@ function renderSellProperties() {
 
         <div class="property-detail-grid">
           <div class="property-detail-stat">
-            <span class="property-detail-stat-label">Total Value</span>
-            <span class="property-detail-stat-val">${formatMoney(totalCost)}</span>
+            <span class="property-detail-stat-label">Market Value</span>
+            <span class="property-detail-stat-val" style="color: #22c55e;">${formatMoney(marketValue)}</span>
           </div>
           <div class="property-detail-stat">
-            <span class="property-detail-stat-label">10% Down Paid</span>
-            <span class="property-detail-stat-val accent">${formatMoney(downPayment)}</span>
+            <span class="property-detail-stat-label">Purchase Price</span>
+            <span class="property-detail-stat-val">${formatMoney(purchasePrice)}</span>
           </div>
           <div class="property-detail-stat">
             <span class="property-detail-stat-label">Mortgage / Round</span>
@@ -891,10 +958,11 @@ function openListModal(prop, gp) {
   if (!prop || !currentRoom) return;
   pendingListProperty = prop;
 
+  const marketVal = gp?.market_value || prop.cost;
   if (modalListPropertyName) modalListPropertyName.textContent = prop.name;
-  if (modalListPropertyBaseCost) modalListPropertyBaseCost.textContent = formatMoney(prop.cost);
+  if (modalListPropertyBaseCost) modalListPropertyBaseCost.textContent = formatMoney(marketVal);
   if (modalListPriceInput) {
-    modalListPriceInput.value = gp?.list_price || prop.cost;
+    modalListPriceInput.value = gp?.list_price || marketVal;
     setTimeout(() => {
       modalListPriceInput.focus();
       modalListPriceInput.select();
@@ -956,6 +1024,198 @@ if (btnConfirmListProperty) {
       btnConfirmListProperty.disabled = false;
       btnConfirmListProperty.textContent = 'List for Sale';
     }
+  });
+}
+
+// Render Make Improvements View
+function renderMakeImprovements() {
+  if (!makeImprovementsContainer) return;
+  makeImprovementsContainer.innerHTML = '';
+
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  const activeSeat = currentRoom?.current_turn_seat || 1;
+  const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
+  const currentRound = currentRoom?.current_round || 1;
+
+  // Filter owned properties
+  const myProperties = gameProperties.filter((gp) => gp.owner_user_id === currentUser?.id);
+
+  if (myProperties.length === 0) {
+    makeImprovementsContainer.innerHTML = `
+      <div class="card placeholder-card">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔨</div>
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.35rem;">No Properties to Renovate</h3>
+        <p style="color: var(--text-muted); max-width: 460px; margin: 0 auto 1.5rem auto; line-height: 1.5;">
+          You don't own any properties yet. Head over to <strong>Buy Properties</strong> on your turn to finance a deed, then return in subsequent rounds to upgrade and boost its market value!
+        </p>
+        <button class="btn btn-primary" id="btn-improve-goto-buy" style="padding: 0.65rem 1.5rem;">
+          Browse Properties
+        </button>
+      </div>
+    `;
+    const gotoBtn = document.getElementById('btn-improve-goto-buy');
+    if (gotoBtn) gotoBtn.addEventListener('click', () => showGameSubpage('buy-properties'));
+    return;
+  }
+
+  myProperties.forEach((gp) => {
+    const prop = catalogProperties.find((cp) => cp.slug === gp.property_slug);
+    if (!prop) return;
+
+    const purchasePrice = gp.purchase_price || prop.cost;
+    const marketValue = gp.market_value || purchasePrice;
+    const roundMortgage = purchasePrice / 40;
+    const isPurchasedThisRound = gp.purchased_round === currentRound;
+    const isListed = !!gp.is_listed;
+    const isListedThisRound = isListed || (gp.listed_round === currentRound);
+    const installedImprovements = Array.isArray(gp.improvements) ? gp.improvements : [];
+    const isFullyUpgraded = installedImprovements.length === 5;
+    const totalBoost = marketValue - purchasePrice;
+
+    const card = document.createElement('div');
+    card.className = 'property-detail-card';
+
+    // Improvements checklist HTML
+    const improvementsListHtml = IMPROVEMENTS_CATALOG.map((imp) => {
+      const isInstalled = installedImprovements.includes(imp.key);
+      const impCost = (purchasePrice * 10) / 100;
+      const impBoost = (purchasePrice * 20) / 100;
+
+      let actionHtml = '';
+      if (isInstalled) {
+        actionHtml = `<span class="badge-installed">✓ INSTALLED</span>`;
+      } else if (!isMyTurn) {
+        actionHtml = `<button class="btn-install-improvement" disabled>Waiting for Turn</button>`;
+      } else if (isPurchasedThisRound) {
+        actionHtml = `
+          <button class="btn-install-improvement" disabled title="Cannot make improvements in the same round the property was purchased (Eligible Round ${currentRound + 1})">
+            Install (${formatMoney(impCost)})
+          </button>
+        `;
+      } else if (isListed) {
+        actionHtml = `
+          <button class="btn-install-improvement" disabled title="Cannot make improvements while property is actively listed for sale">
+            Install (${formatMoney(impCost)})
+          </button>
+        `;
+      } else if (isListedThisRound) {
+        actionHtml = `
+          <button class="btn-install-improvement" disabled title="Cannot list and improve a property in the same round (Eligible Round ${currentRound + 1})">
+            Install (${formatMoney(impCost)})
+          </button>
+        `;
+      } else if (myPlayer && myPlayer.cash < impCost) {
+        actionHtml = `
+          <button class="btn-install-improvement" disabled title="Insufficient cash ($${myPlayer.cash.toLocaleString()} available)">
+            Install (${formatMoney(impCost)})
+          </button>
+        `;
+      } else {
+        actionHtml = `
+          <button class="btn-install-improvement btn-action-improve" data-slug="${prop.slug}" data-key="${imp.key}" data-name="${escapeHtml(imp.name)}" data-cost="${impCost}">
+            Install (${formatMoney(impCost)})
+          </button>
+        `;
+      }
+
+      return `
+        <div class="improvement-item ${isInstalled ? 'is-installed' : ''}">
+          <div class="improvement-info">
+            <div class="improvement-title">
+              <span>${imp.icon}</span>
+              <span>${escapeHtml(imp.name)}</span>
+            </div>
+            <div class="improvement-meta">
+              <span>Cost: <span class="improvement-cost-val">${formatMoney(impCost)}</span></span>
+              <span>Boost: <span class="improvement-boost-val">+${formatMoney(impBoost)} Market Value</span></span>
+            </div>
+          </div>
+          <div>
+            ${actionHtml}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="property-detail-stripe" style="background-color: ${prop.color_hex};"></div>
+      <div class="property-detail-hero">
+        <div class="property-hero-graphic" style="position: absolute; inset: 0; z-index: 1;">
+          ${getPropertySvgPlaceholder(prop.color_hex)}
+        </div>
+      </div>
+      <div class="property-detail-body">
+        <div class="property-detail-header-row">
+          <div class="property-detail-title-group">
+            <h3 style="margin: 0;">${escapeHtml(prop.name)}</h3>
+          </div>
+          ${isFullyUpgraded ? '<span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #16a34a; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">MAX UPGRADED (2X)</span>' : ''}
+        </div>
+
+        <div class="property-detail-grid">
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Market Value</span>
+            <span class="property-detail-stat-val" style="color: #22c55e;">
+              ${formatMoney(marketValue)}
+              ${totalBoost > 0 ? `<span style="font-size: 0.8rem; font-weight: 600; opacity: 0.9; margin-left: 4px;">(+${Math.round((totalBoost / purchasePrice) * 100)}%)</span>` : ''}
+            </span>
+          </div>
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Purchase Price</span>
+            <span class="property-detail-stat-val">${formatMoney(purchasePrice)}</span>
+          </div>
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Mortgage / Round</span>
+            <span class="property-detail-stat-val" style="color: #38bdf8;">${formatMoney(roundMortgage)}</span>
+          </div>
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Layout & Size</span>
+            <span class="property-detail-stat-val" style="font-size: 1.1rem; padding-top: 0.2rem;">
+              ${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="improvements-section">
+        <div class="improvements-header">
+          <h4>🔨 Property Improvements</h4>
+          <span class="improvements-progress">${installedImprovements.length} of 5 Completed</span>
+        </div>
+        <div class="improvements-list">
+          ${improvementsListHtml}
+        </div>
+      </div>
+    `;
+
+    // Hook install buttons
+    card.querySelectorAll('.btn-action-improve').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const slug = btn.getAttribute('data-slug');
+        const key = btn.getAttribute('data-key');
+
+        btn.disabled = true;
+        btn.textContent = 'Installing...';
+
+        try {
+          await makeImprovement(currentRoom.id, slug, key);
+          const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+          currentRoom = room;
+          currentPlayers = players;
+          gameProperties = updatedProps;
+
+          renderGameHUD();
+          renderProperties();
+          renderMakeImprovements();
+        } catch (err) {
+          showAlert(err.message || 'Failed to install improvement.');
+          btn.disabled = false;
+          renderMakeImprovements();
+        }
+      });
+    });
+
+    makeImprovementsContainer.appendChild(card);
   });
 }
 
@@ -1101,12 +1361,6 @@ function renderMortgagePayments() {
           renderGameHUD();
           renderMortgagePayments();
           renderProperties();
-          showAlert(
-            isDouble
-              ? `Mortgage caught up! Double payment of ${formatMoney(paymentAmount)} brought ${catalog.name} current.`
-              : `Mortgage payment of ${formatMoney(paymentAmount)} processed for ${catalog.name}.`,
-            'success'
-          );
         } catch (err) {
           showAlert(err.message || 'Failed to make mortgage payment.');
           payBtns.forEach((b) => {
@@ -1141,6 +1395,7 @@ function setupRealtimeSubscription(roomId) {
           renderProperties();
           if (currentGameSubpage === 'make-payments') renderMortgagePayments();
           if (currentGameSubpage === 'sell-properties') renderSellProperties();
+          if (currentGameSubpage === 'make-improvements') renderMakeImprovements();
           if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
         } else {
           renderSeats();
@@ -1171,6 +1426,7 @@ function setupRealtimeSubscription(roomId) {
         renderProperties();
         if (currentGameSubpage === 'make-payments') renderMortgagePayments();
         if (currentGameSubpage === 'sell-properties') renderSellProperties();
+        if (currentGameSubpage === 'make-improvements') renderMakeImprovements();
         if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
       } catch (err) {
         console.error('Error refreshing properties:', err);
@@ -1396,13 +1652,7 @@ if (cardNavSellProperties) {
 }
 
 if (cardNavMakeImprovements) {
-  cardNavMakeImprovements.addEventListener('click', () =>
-    showGameSubpage('placeholder', {
-      title: 'Make Improvements',
-      icon: '🔨',
-      desc: 'Renovate properties, build houses, and increase appraisal value across your real estate holdings. Coming in an upcoming phase.'
-    })
-  );
+  cardNavMakeImprovements.addEventListener('click', () => showGameSubpage('make-improvements'));
   cardNavMakeImprovements.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') cardNavMakeImprovements.click();
   });

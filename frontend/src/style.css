@@ -758,7 +758,8 @@ input[type="text"]:focus {
   margin: 0 auto;
 }
 
-#sell-properties-container {
+#sell-properties-container,
+#make-improvements-container {
   display: flex;
   flex-direction: column;
   gap: 2rem;
@@ -951,6 +952,141 @@ input[type="text"]:focus {
 .btn-detail-back:hover {
   background-color: #475569;
   transform: translateY(-1px);
+}
+
+/* Improvements Renovation Section */
+.improvements-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  padding: 1.75rem 2rem 2rem 2rem;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.improvements-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.improvements-header h4 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.improvements-progress {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.7);
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-color);
+}
+
+.improvements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.improvement-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.1rem 1.35rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+  transition: all 0.2s ease;
+}
+
+.improvement-item.is-installed {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.improvement-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.improvement-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.improvement-meta {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.improvement-cost-val {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+.improvement-boost-val {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.btn-install-improvement {
+  background: linear-gradient(135deg, #0284c7, #2563eb);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-install-improvement:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.btn-install-improvement:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #334155;
+  color: #94a3b8;
+}
+
+.badge-installed {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  padding: 0.45rem 1rem;
+  border-radius: 9999px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 /* Mortgage & Make Payments Styles */
