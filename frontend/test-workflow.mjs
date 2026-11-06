@@ -483,6 +483,26 @@ async function runTest() {
   }
   console.log('   ✓ Single-player turn advance correctly wrapped back to Seat 1.');
 
+  // Security Audit Tests: Verify direct table writes (cash tampering, round manipulation) are blocked!
+  console.log('9b. Testing security hardening (blocking direct table writes)...');
+  const { error: cashTamperErr } = await soloHost.client
+    .from('room_players')
+    .update({ cash: 999999999 })
+    .eq('room_id', soloRoomId);
+  if (!cashTamperErr) {
+    throw new Error('SECURITY FAILURE: Direct update on room_players.cash succeeded!');
+  }
+  console.log(`   ✓ Direct cash tampering blocked: "${cashTamperErr.message}"`);
+
+  const { error: roomTamperErr } = await soloHost.client
+    .from('rooms')
+    .update({ current_round: 99 })
+    .eq('id', soloRoomId);
+  if (!roomTamperErr) {
+    throw new Error('SECURITY FAILURE: Direct update on rooms.current_round succeeded!');
+  }
+  console.log(`   ✓ Direct room state tampering blocked: "${roomTamperErr.message}"`);
+
   // Clean up solo room
   await soloHost.client.rpc('leave_room', { p_room_id: soloRoomId });
 

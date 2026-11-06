@@ -1029,8 +1029,8 @@ if (btnConfirmListProperty) {
   btnConfirmListProperty.addEventListener('click', async () => {
     if (!pendingListProperty || !currentRoom) return;
     const askingPrice = parseInt(modalListPriceInput.value, 10);
-    if (!askingPrice || askingPrice <= 0) {
-      showAlert('Please enter a valid asking price greater than $0.');
+    if (!askingPrice || askingPrice <= 0 || askingPrice > 10000000) {
+      showAlert('Please enter a valid asking price between $1 and $10,000,000.');
       modalListPriceInput.focus();
       return;
     }
