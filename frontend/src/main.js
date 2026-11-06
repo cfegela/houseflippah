@@ -442,8 +442,8 @@ function renderProperties() {
     const gp = gameProperties.find((g) => g.property_slug === prop.slug);
     // Bank-owned properties are available for purchase
     if (!gp || !gp.owner_user_id) return true;
-    // Resale properties listed by other players
-    if (gp.is_listed && gp.owner_user_id !== currentUser?.id) return true;
+    // Resale properties listed by any player (including your own listings)
+    if (gp.is_listed) return true;
     return false;
   });
 
@@ -463,6 +463,8 @@ function renderProperties() {
   availableProperties.forEach((prop) => {
     const gp = gameProperties.find((g) => g.property_slug === prop.slug);
     const isResale = !!(gp && gp.is_listed);
+    const isMyListing = isResale && gp.owner_user_id === currentUser?.id;
+    const effectivePrice = isResale ? (gp.list_price || prop.cost) : prop.cost;
 
     const card = document.createElement('div');
     card.className = 'zillow-card';
@@ -471,7 +473,9 @@ function renderProperties() {
     // Image & Status Header
     const installedImprovements = Array.isArray(gp?.improvements) ? gp.improvements : [];
     let statusBadgeHtml = '';
-    if (isResale) {
+    if (isMyListing) {
+      statusBadgeHtml = `<span class="listing-badge" style="background: #0284c7; color: #fff;">YOUR LISTING</span>`;
+    } else if (isResale) {
       statusBadgeHtml = `<span class="listing-badge" style="background: #0284c7; color: #fff;">RESALE</span>`;
     } else if (installedImprovements.length > 0) {
       statusBadgeHtml = `<span class="listing-badge" style="background: #16a34a; color: #fff;">UPGRADED (${installedImprovements.length})</span>`;
@@ -496,10 +500,10 @@ function renderProperties() {
         </div>
       </div>
       <div class="card-body">
-        <div class="prop-price">${formatMoney(prop.cost)}</div>
+        <div class="prop-price">${formatMoney(effectivePrice)}</div>
         <div class="prop-specs">${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft</div>
         <div style="font-size: 0.8rem; color: #38bdf8; font-weight: 600; margin-top: 0.15rem;">
-          10% Down: ${formatMoney((prop.cost * 10) / 100)} • ${formatMoney(prop.cost / 40)}/rd
+          10% Down: ${formatMoney((effectivePrice * 10) / 100)} • ${formatMoney(effectivePrice / 40)}/rd
         </div>
         <div class="prop-name">${escapeHtml(prop.name)}</div>
       </div>
@@ -563,9 +567,16 @@ function renderPropertyDetails(slug) {
   );
 
   const installedImprovements = Array.isArray(gp?.improvements) ? gp.improvements : [];
+  const isListed = !!gp?.is_listed;
   let statusBadgeHtml = '';
   if (!isBankOwned && !isOwnedByMe) {
-    statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #475569; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">OWNED BY SEAT ${ownerPlayer?.seat_number || '?'} (${escapeHtml(ownerPlayer?.display_name || 'Player')})</span></div>`;
+    if (isListed) {
+      statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(2, 132, 199, 0.25); color: #38bdf8; border: 1px solid #0284c7; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">FOR RESALE • ${formatMoney(gp.list_price)} (SEAT ${ownerPlayer?.seat_number || '?'})</span></div>`;
+    } else {
+      statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #475569; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">OWNED BY SEAT ${ownerPlayer?.seat_number || '?'} (${escapeHtml(ownerPlayer?.display_name || 'Player')})</span></div>`;
+    }
+  } else if (isOwnedByMe && isListed) {
+    statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(2, 132, 199, 0.25); color: #38bdf8; border: 1px solid #0284c7; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">YOUR ACTIVE LISTING • ${formatMoney(gp.list_price)}</span></div>`;
   } else if (isBankOwned && installedImprovements.length > 0) {
     statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #16a34a; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">UPGRADED (${installedImprovements.length} of 5)</span></div>`;
   }
@@ -600,11 +611,19 @@ function renderPropertyDetails(slug) {
       `;
     }
   } else if (isOwnedByMe) {
-    actionHtml = `
-      <button class="btn-detail-buy" disabled>
-        Purchased
-      </button>
-    `;
+    if (isListed) {
+      actionHtml = `
+        <button class="btn btn-secondary" id="btn-detail-manage-listing" style="font-weight: 700; padding: 0.75rem 1.4rem;">
+          Manage Listing in Sell Properties →
+        </button>
+      `;
+    } else {
+      actionHtml = `
+        <button class="btn-detail-buy" disabled>
+          Purchased
+        </button>
+      `;
+    }
   } else {
     actionHtml = `
       <div style="color: var(--text-muted); font-size: 0.95rem;">
@@ -633,15 +652,15 @@ function renderPropertyDetails(slug) {
 
       <div class="property-detail-grid">
         <div class="property-detail-stat">
-          <span class="property-detail-stat-label">Market Value</span>
+          <span class="property-detail-stat-label">${isListed ? 'Asking List Price' : 'Market Value'}</span>
           <span class="property-detail-stat-val" style="color: #22c55e;">
-            ${formatMoney(marketValue)}
-            ${marketValue > totalCost ? `<span style="font-size: 0.8rem; font-weight: 600; opacity: 0.9; margin-left: 4px;">(+${Math.round(((marketValue - totalCost) / totalCost) * 100)}%)</span>` : ''}
+            ${formatMoney(isListed ? gp.list_price : marketValue)}
+            ${!isListed && marketValue > totalCost ? `<span style="font-size: 0.8rem; font-weight: 600; opacity: 0.9; margin-left: 4px;">(+${Math.round(((marketValue - totalCost) / totalCost) * 100)}%)</span>` : ''}
           </span>
         </div>
         <div class="property-detail-stat">
-          <span class="property-detail-stat-label">${isBankOwned ? 'Purchase Price (Bank)' : 'Purchase Price'}</span>
-          <span class="property-detail-stat-val ${isBankOwned ? 'accent' : ''}">${formatMoney(isBankOwned ? totalCost : purchasePrice)}</span>
+          <span class="property-detail-stat-label">${isBankOwned ? 'Purchase Price (Bank)' : (isListed ? 'Market Appraisal' : 'Purchase Price')}</span>
+          <span class="property-detail-stat-val ${isBankOwned ? 'accent' : ''}">${formatMoney(isBankOwned ? totalCost : (isListed ? marketValue : purchasePrice))}</span>
         </div>
         <div class="property-detail-stat">
           <span class="property-detail-stat-label">Mortgage / Round</span>
@@ -684,6 +703,11 @@ function renderPropertyDetails(slug) {
   const backBottomBtn = detailCard.querySelector('#btn-detail-back-bottom');
   if (backBottomBtn) {
     backBottomBtn.addEventListener('click', () => showGameSubpage('buy-properties'));
+  }
+
+  const manageListingBtn = detailCard.querySelector('#btn-detail-manage-listing');
+  if (manageListingBtn) {
+    manageListingBtn.addEventListener('click', () => showGameSubpage('sell-properties'));
   }
 
   const gotoPaymentsBtn = detailCard.querySelector('#btn-detail-goto-payments');
@@ -820,17 +844,6 @@ function renderSellProperties() {
     const isImprovedThisRound = gp.last_improved_round === currentRound;
     const isListed = !!gp.is_listed;
 
-    let statusBadgeHtml = '';
-    if (isListed) {
-      statusBadgeHtml = `
-        <div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;">
-          <span class="badge" style="background: rgba(2, 132, 199, 0.25); color: #38bdf8; border: 1px solid #0284c7; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">
-            LISTED • ${formatMoney(gp.list_price)}
-          </span>
-        </div>
-      `;
-    }
-
     let actionBtnHtml = '';
     if (isListed) {
       if (isMyTurn) {
@@ -879,7 +892,6 @@ function renderSellProperties() {
     card.innerHTML = `
       <div class="property-detail-stripe" style="background-color: ${prop.color_hex};"></div>
       <div class="property-detail-hero">
-        ${statusBadgeHtml}
         <div class="property-hero-graphic" style="position: absolute; inset: 0; z-index: 1;">
           ${getPropertySvgPlaceholder(prop.color_hex)}
         </div>
@@ -892,6 +904,12 @@ function renderSellProperties() {
         </div>
 
         <div class="property-detail-grid">
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Asking Price</span>
+            <span class="property-detail-stat-val" style="${isListed ? 'color: #38bdf8; font-weight: 800;' : 'color: var(--text-muted);'}">
+              ${isListed ? formatMoney(gp.list_price) : 'Not Listed'}
+            </span>
+          </div>
           <div class="property-detail-stat">
             <span class="property-detail-stat-label">Market Value</span>
             <span class="property-detail-stat-val" style="color: #22c55e;">${formatMoney(marketValue)}</span>
