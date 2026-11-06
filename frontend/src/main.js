@@ -697,8 +697,8 @@ function renderPropertyDetails(slug) {
         `;
       } else {
         actionHtml = `
-          <button class="btn-detail-buy" disabled title="Insufficient cash">
-            Insufficient Cash (${formatMoney(myPlayer?.cash || 0)} / ${formatMoney(downPayment)})
+          <button class="btn-detail-buy" disabled title="Insufficient cash (${formatMoney(myPlayer?.cash || 0)} / ${formatMoney(downPayment)})">
+            Insufficient Cash
           </button>
         `;
       }
@@ -712,8 +712,8 @@ function renderPropertyDetails(slug) {
   } else if (isOwnedByMe) {
     if (isListed) {
       actionHtml = `
-        <button class="btn btn-secondary" id="btn-detail-manage-listing" style="font-weight: 700; padding: 0.75rem 1.4rem;">
-          Manage Listing in Sell Properties →
+        <button class="btn-detail-back" id="btn-detail-manage-listing" style="width: 100%; justify-content: center;">
+          Manage Listing
         </button>
       `;
     } else {
@@ -725,8 +725,8 @@ function renderPropertyDetails(slug) {
     }
   } else {
     actionHtml = `
-      <div style="color: var(--text-muted); font-size: 0.95rem;">
-        Currently owned by <strong>${escapeHtml(ownerPlayer?.display_name || 'Opponent')}</strong> (Seat ${ownerPlayer?.seat_number || '?'})
+      <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; width: 100%; display: flex; align-items: center; justify-content: center; line-height: 1.3;">
+        Owned by <strong>&nbsp;${escapeHtml(ownerPlayer?.display_name || 'Opponent')}&nbsp;</strong> (Seat ${ownerPlayer?.seat_number || '?'})
       </div>
     `;
   }
@@ -1474,12 +1474,12 @@ function renderMortgagePayments() {
       `;
       if (isMyTurn) {
         actionBtnHtml = `
-          <div style="display: flex; gap: 0.75rem; width: 100%; flex-wrap: wrap;">
-            <button class="btn-pay-mortgage btn-pay-single-delinquent" data-slug="${catalog.slug}" data-double="false" style="flex: 1; min-width: 130px;">
+          <div class="actions-delinquent-row" style="display: flex; gap: 0.5rem; width: 100%;">
+            <button class="btn-pay-mortgage btn-pay-single-delinquent" data-slug="${catalog.slug}" data-double="false" style="flex: 1; min-width: 0; padding: 0.65rem 0.35rem; font-size: 0.82rem;">
               Pay Single (${formatMoney(basePayment)})
-              <span style="display: block; font-size: 0.72rem; opacity: 0.9; margin-top: 2px;">Stave Off Foreclosure</span>
+              <span style="display: block; font-size: 0.72rem; opacity: 0.9; margin-top: 2px;">Stave Off</span>
             </button>
-            <button class="btn-pay-mortgage btn-pay-double-delinquent" data-slug="${catalog.slug}" data-double="true" style="flex: 1; min-width: 130px;">
+            <button class="btn-pay-mortgage btn-pay-double-delinquent" data-slug="${catalog.slug}" data-double="true" style="flex: 1; min-width: 0; padding: 0.65rem 0.35rem; font-size: 0.82rem;">
               Pay Double (${formatMoney(basePayment * 2)})
               <span style="display: block; font-size: 0.72rem; opacity: 0.9; margin-top: 2px;">Bring Current</span>
             </button>

@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "wrangler dev",
     "test": "node test-workflow.mjs",
+    "test:mobile": "node test-mobile-widths.mjs",
     "deploy": "wrangler deploy"
   },
   "dependencies": {
