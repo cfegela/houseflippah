@@ -550,7 +550,7 @@ function renderPropertyDetails(slug) {
       <div class="card placeholder-card">
         <h3>Property Not Found</h3>
         <p style="color: var(--text-muted);">Could not locate details for "${escapeHtml(slug)}".</p>
-        <button class="btn btn-secondary" id="btn-err-back">Back to Properties</button>
+        <button class="btn btn-secondary" id="btn-err-back">Keep Browsing</button>
       </div>
     `;
     const errBack = document.getElementById('btn-err-back');
@@ -600,13 +600,13 @@ function renderPropertyDetails(slug) {
       if (hasPurchasedThisRound) {
         actionHtml = `
           <button class="btn-detail-buy" disabled title="You can only purchase 1 property per round">
-            Purchase Property
+            Purchase
           </button>
         `;
       } else if (canAfford) {
         actionHtml = `
           <button class="btn-detail-buy" id="btn-buy-property-detail" data-slug="${prop.slug}">
-            Purchase Property
+            Purchase
           </button>
         `;
       } else {
@@ -704,7 +704,7 @@ function renderPropertyDetails(slug) {
 
     <div class="property-detail-actions">
       <button class="btn-detail-back" id="btn-detail-back-bottom">
-        ← Back to Properties
+        Keep Browsing
       </button>
       <div>
         ${actionHtml}
