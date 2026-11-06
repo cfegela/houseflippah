@@ -178,7 +178,7 @@
             </div>
             <div class="form-group" style="margin-top: 0.5rem; margin-bottom: 0;">
               <label for="modal-list-price-input" style="font-size: 0.8rem;">Asking Price ($)</label>
-              <input type="number" id="modal-list-price-input" min="1" step="1000" placeholder="e.g. 100000" style="background: #0b1120; border: 1px solid var(--border-color); color: var(--text-main); padding: 0.75rem 1rem; border-radius: 8px; font-size: 1.1rem; font-weight: 700; width: 100%; box-sizing: border-box;" />
+              <input type="number" id="modal-list-price-input" min="1" placeholder="e.g. 100000" style="background: #0b1120; border: 1px solid var(--border-color); color: var(--text-main); padding: 0.75rem 1rem; border-radius: 8px; font-size: 1.1rem; font-weight: 700; width: 100%; box-sizing: border-box;" />
             </div>
           </div>
           <div class="actions-row" style="justify-content: flex-end; gap: 0.75rem;">
@@ -187,6 +187,46 @@
             </button>
             <button id="btn-confirm-list-property" class="btn btn-primary" style="background: linear-gradient(135deg, #0284c7, #2563eb); min-width: 140px;">
               List for Sale
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Improve Property Modal -->
+      <div id="improve-property-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 580px; text-align: left; width: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div>
+              <h3 style="font-size: 1.35rem; font-weight: 800; margin: 0;" id="modal-improve-property-name">Make Improvements</h3>
+              <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;" id="modal-improve-property-subtitle">
+                Each improvement costs 10% and boosts market value by +20%
+              </div>
+            </div>
+            <span class="improvements-progress" id="modal-improve-progress">0 of 5 Completed</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; margin: 1rem 0; font-size: 0.88rem;">
+            <div>
+              <span style="color: var(--text-muted); display: block; font-size: 0.75rem;">Market Value</span>
+              <strong id="modal-improve-market-value" style="color: #22c55e; font-size: 1.05rem;">$0</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block; font-size: 0.75rem;">Purchase Price</span>
+              <strong id="modal-improve-purchase-price" style="font-size: 1.05rem;">$0</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-muted); display: block; font-size: 0.75rem;">Your Cash</span>
+              <strong id="modal-improve-player-cash" style="color: #38bdf8; font-size: 1.05rem;">$0</strong>
+            </div>
+          </div>
+
+          <div class="improvements-list" id="modal-improvements-list" style="max-height: 50vh; overflow-y: auto; padding-right: 4px; margin-bottom: 1.25rem;">
+            <!-- Dynamically populated 5 improvement items -->
+          </div>
+
+          <div class="actions-row" style="justify-content: flex-end;">
+            <button id="btn-close-improve-modal" class="btn btn-secondary" style="padding: 0.65rem 1.5rem; font-weight: 700;">
+              Done
             </button>
           </div>
         </div>

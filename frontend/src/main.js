@@ -132,6 +132,19 @@ const btnConfirmListProperty = document.getElementById('btn-confirm-list-propert
 
 let pendingListProperty = null;
 
+// DOM Elements - Improve Property Modal
+const improvePropertyModal = document.getElementById('improve-property-modal');
+const modalImprovePropertyName = document.getElementById('modal-improve-property-name');
+const modalImprovePropertySubtitle = document.getElementById('modal-improve-property-subtitle');
+const modalImproveProgress = document.getElementById('modal-improve-progress');
+const modalImproveMarketValue = document.getElementById('modal-improve-market-value');
+const modalImprovePurchasePrice = document.getElementById('modal-improve-purchase-price');
+const modalImprovePlayerCash = document.getElementById('modal-improve-player-cash');
+const modalImprovementsList = document.getElementById('modal-improvements-list');
+const btnCloseImproveModal = document.getElementById('btn-close-improve-modal');
+
+let pendingImproveProperty = null;
+
 // Helpers
 function formatMoney(amount) {
   return '$' + Number(amount || 0).toLocaleString('en-US');
@@ -1090,70 +1103,43 @@ function renderMakeImprovements() {
     const isFullyUpgraded = installedImprovements.length === 5;
     const totalBoost = marketValue - purchasePrice;
 
+    let actionBtnHtml = '';
+    if (isFullyUpgraded) {
+      actionBtnHtml = `
+        <button class="btn-detail-buy" disabled style="background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid #16a34a;">
+          Max Upgraded (5/5)
+        </button>
+      `;
+    } else if (!isMyTurn) {
+      actionBtnHtml = `<button class="btn-detail-buy" disabled>Waiting for Turn</button>`;
+    } else if (isPurchasedThisRound) {
+      actionBtnHtml = `
+        <button class="btn-detail-buy" disabled title="Cannot make improvements in the same round the property was purchased (Eligible Round ${currentRound + 1})">
+          Improve Property
+        </button>
+      `;
+    } else if (isListed) {
+      actionBtnHtml = `
+        <button class="btn-detail-buy" disabled title="Cannot make improvements while property is actively listed for sale">
+          Improve Property
+        </button>
+      `;
+    } else if (isListedThisRound) {
+      actionBtnHtml = `
+        <button class="btn-detail-buy" disabled title="Cannot list and improve a property in the same round (Eligible Round ${currentRound + 1})">
+          Improve Property
+        </button>
+      `;
+    } else {
+      actionBtnHtml = `
+        <button class="btn-detail-buy btn-open-improve-modal" data-slug="${prop.slug}">
+          Improve Property
+        </button>
+      `;
+    }
+
     const card = document.createElement('div');
     card.className = 'property-detail-card';
-
-    // Improvements checklist HTML
-    const improvementsListHtml = IMPROVEMENTS_CATALOG.map((imp) => {
-      const isInstalled = installedImprovements.includes(imp.key);
-      const impCost = (purchasePrice * 10) / 100;
-      const impBoost = (purchasePrice * 20) / 100;
-
-      let actionHtml = '';
-      if (isInstalled) {
-        actionHtml = `<span class="badge-installed">✓ INSTALLED</span>`;
-      } else if (!isMyTurn) {
-        actionHtml = `<button class="btn-install-improvement" disabled>Waiting for Turn</button>`;
-      } else if (isPurchasedThisRound) {
-        actionHtml = `
-          <button class="btn-install-improvement" disabled title="Cannot make improvements in the same round the property was purchased (Eligible Round ${currentRound + 1})">
-            Install (${formatMoney(impCost)})
-          </button>
-        `;
-      } else if (isListed) {
-        actionHtml = `
-          <button class="btn-install-improvement" disabled title="Cannot make improvements while property is actively listed for sale">
-            Install (${formatMoney(impCost)})
-          </button>
-        `;
-      } else if (isListedThisRound) {
-        actionHtml = `
-          <button class="btn-install-improvement" disabled title="Cannot list and improve a property in the same round (Eligible Round ${currentRound + 1})">
-            Install (${formatMoney(impCost)})
-          </button>
-        `;
-      } else if (myPlayer && myPlayer.cash < impCost) {
-        actionHtml = `
-          <button class="btn-install-improvement" disabled title="Insufficient cash ($${myPlayer.cash.toLocaleString()} available)">
-            Install (${formatMoney(impCost)})
-          </button>
-        `;
-      } else {
-        actionHtml = `
-          <button class="btn-install-improvement btn-action-improve" data-slug="${prop.slug}" data-key="${imp.key}" data-name="${escapeHtml(imp.name)}" data-cost="${impCost}">
-            Install (${formatMoney(impCost)})
-          </button>
-        `;
-      }
-
-      return `
-        <div class="improvement-item ${isInstalled ? 'is-installed' : ''}">
-          <div class="improvement-info">
-            <div class="improvement-title">
-              <span>${imp.icon}</span>
-              <span>${escapeHtml(imp.name)}</span>
-            </div>
-            <div class="improvement-meta">
-              <span>Cost: <span class="improvement-cost-val">${formatMoney(impCost)}</span></span>
-              <span>Boost: <span class="improvement-boost-val">+${formatMoney(impBoost)} Market Value</span></span>
-            </div>
-          </div>
-          <div>
-            ${actionHtml}
-          </div>
-        </div>
-      `;
-    }).join('');
 
     card.innerHTML = `
       <div class="property-detail-stripe" style="background-color: ${prop.color_hex};"></div>
@@ -1183,6 +1169,10 @@ function renderMakeImprovements() {
             <span class="property-detail-stat-val">${formatMoney(purchasePrice)}</span>
           </div>
           <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Improvements</span>
+            <span class="property-detail-stat-val" style="color: #38bdf8;">${installedImprovements.length} of 5</span>
+          </div>
+          <div class="property-detail-stat">
             <span class="property-detail-stat-label">Mortgage / Round</span>
             <span class="property-detail-stat-val" style="color: #38bdf8;">${formatMoney(roundMortgage)}</span>
           </div>
@@ -1195,28 +1185,111 @@ function renderMakeImprovements() {
         </div>
       </div>
 
-      <div class="improvements-section">
-        <div class="improvements-header">
-          <h4>🔨 Property Improvements</h4>
-          <span class="improvements-progress">${installedImprovements.length} of 5 Completed</span>
-        </div>
-        <div class="improvements-list">
-          ${improvementsListHtml}
+      <div class="property-detail-actions" style="justify-content: flex-end;">
+        <div>
+          ${actionBtnHtml}
         </div>
       </div>
     `;
 
-    // Hook install buttons
-    card.querySelectorAll('.btn-action-improve').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const slug = btn.getAttribute('data-slug');
-        const key = btn.getAttribute('data-key');
+    // Hook Improve Property button
+    const openImproveBtn = card.querySelector('.btn-open-improve-modal');
+    if (openImproveBtn) {
+      openImproveBtn.addEventListener('click', () => {
+        openImproveModal(prop, gp);
+      });
+    }
 
-        btn.disabled = true;
-        btn.textContent = 'Installing...';
+    makeImprovementsContainer.appendChild(card);
+  });
+}
 
+// Improve Property Modal Logic
+function openImproveModal(prop, gp) {
+  if (!prop || !currentRoom) return;
+  pendingImproveProperty = prop;
+  renderImproveModalContent();
+  if (improvePropertyModal) {
+    improvePropertyModal.classList.remove('hidden');
+  }
+}
+
+function closeImproveModal() {
+  if (improvePropertyModal) {
+    improvePropertyModal.classList.add('hidden');
+  }
+  pendingImproveProperty = null;
+}
+
+function renderImproveModalContent() {
+  if (!pendingImproveProperty || !improvePropertyModal) return;
+  const prop = pendingImproveProperty;
+  const gp = gameProperties.find((g) => g.property_slug === prop.slug);
+  if (!gp) return;
+
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  const purchasePrice = gp.purchase_price || prop.cost;
+  const marketValue = gp.market_value || purchasePrice;
+  const installedImprovements = Array.isArray(gp.improvements) ? gp.improvements : [];
+  const playerCash = myPlayer?.cash || 0;
+
+  if (modalImprovePropertyName) modalImprovePropertyName.textContent = prop.name;
+  if (modalImproveProgress) modalImproveProgress.textContent = `${installedImprovements.length} of 5 Completed`;
+  if (modalImproveMarketValue) modalImproveMarketValue.textContent = formatMoney(marketValue);
+  if (modalImprovePurchasePrice) modalImprovePurchasePrice.textContent = formatMoney(purchasePrice);
+  if (modalImprovePlayerCash) modalImprovePlayerCash.textContent = formatMoney(playerCash);
+
+  if (!modalImprovementsList) return;
+  modalImprovementsList.innerHTML = '';
+
+  IMPROVEMENTS_CATALOG.forEach((imp) => {
+    const isInstalled = installedImprovements.includes(imp.key);
+    const impCost = (purchasePrice * 10) / 100;
+    const impBoost = (purchasePrice * 20) / 100;
+    const canAfford = playerCash >= impCost;
+
+    let actionBtnHtml = '';
+    if (isInstalled) {
+      actionBtnHtml = `<span class="badge-installed">✓ INSTALLED</span>`;
+    } else if (!canAfford) {
+      actionBtnHtml = `
+        <button class="btn-install-improvement" disabled title="Insufficient cash (${formatMoney(playerCash)} available)">
+          Install (${formatMoney(impCost)})
+        </button>
+      `;
+    } else {
+      actionBtnHtml = `
+        <button class="btn-install-improvement btn-modal-install" data-slug="${prop.slug}" data-key="${imp.key}">
+          Install (${formatMoney(impCost)})
+        </button>
+      `;
+    }
+
+    const itemDiv = document.createElement('div');
+    itemDiv.className = `improvement-item ${isInstalled ? 'is-installed' : ''}`;
+    itemDiv.innerHTML = `
+      <div class="improvement-info">
+        <div class="improvement-title">
+          <span>${imp.icon}</span>
+          <span>${escapeHtml(imp.name)}</span>
+        </div>
+        <div class="improvement-meta">
+          <span>Cost: <span class="improvement-cost-val">${formatMoney(impCost)}</span></span>
+          <span>Boost: <span class="improvement-boost-val">+${formatMoney(impBoost)} Market Value</span></span>
+        </div>
+      </div>
+      <div>
+        ${actionBtnHtml}
+      </div>
+    `;
+
+    const installBtn = itemDiv.querySelector('.btn-modal-install');
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        installBtn.disabled = true;
+        installBtn.textContent = 'Installing...';
         try {
-          await makeImprovement(currentRoom.id, slug, key);
+          await makeImprovement(currentRoom.id, prop.slug, imp.key);
           const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
           currentRoom = room;
           currentPlayers = players;
@@ -1225,15 +1298,25 @@ function renderMakeImprovements() {
           renderGameHUD();
           renderProperties();
           renderMakeImprovements();
+          renderImproveModalContent();
         } catch (err) {
           showAlert(err.message || 'Failed to install improvement.');
-          btn.disabled = false;
-          renderMakeImprovements();
+          renderImproveModalContent();
         }
       });
-    });
+    }
 
-    makeImprovementsContainer.appendChild(card);
+    modalImprovementsList.appendChild(itemDiv);
+  });
+}
+
+if (btnCloseImproveModal) {
+  btnCloseImproveModal.addEventListener('click', closeImproveModal);
+}
+
+if (improvePropertyModal) {
+  improvePropertyModal.addEventListener('click', (e) => {
+    if (e.target === improvePropertyModal) closeImproveModal();
   });
 }
 
@@ -1413,7 +1496,10 @@ function setupRealtimeSubscription(roomId) {
           renderProperties();
           if (currentGameSubpage === 'make-payments') renderMortgagePayments();
           if (currentGameSubpage === 'sell-properties') renderSellProperties();
-          if (currentGameSubpage === 'make-improvements') renderMakeImprovements();
+          if (currentGameSubpage === 'make-improvements') {
+            renderMakeImprovements();
+            if (pendingImproveProperty) renderImproveModalContent();
+          }
           if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
         } else {
           renderSeats();
@@ -1444,7 +1530,10 @@ function setupRealtimeSubscription(roomId) {
         renderProperties();
         if (currentGameSubpage === 'make-payments') renderMortgagePayments();
         if (currentGameSubpage === 'sell-properties') renderSellProperties();
-        if (currentGameSubpage === 'make-improvements') renderMakeImprovements();
+        if (currentGameSubpage === 'make-improvements') {
+          renderMakeImprovements();
+          if (pendingImproveProperty) renderImproveModalContent();
+        }
         if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
       } catch (err) {
         console.error('Error refreshing properties:', err);
