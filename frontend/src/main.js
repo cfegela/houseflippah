@@ -431,7 +431,7 @@ function renderGameHUD() {
   } else {
     turnIndicatorBox.classList.remove('is-my-turn');
     btnEndTurn.disabled = true;
-    btnEndTurn.title = 'Waiting for your turn';
+    btnEndTurn.title = 'Wait your turn';
   }
 
   // Wallet (if present)
@@ -619,7 +619,7 @@ function renderPropertyDetails(slug) {
     } else {
       actionHtml = `
         <button class="btn-detail-buy" disabled>
-          Waiting for Your Turn (Seat ${myPlayer?.seat_number || '?'})
+          Wait Your Turn
         </button>
       `;
     }
@@ -703,10 +703,10 @@ function renderPropertyDetails(slug) {
     ` : ''}
 
     <div class="property-detail-actions">
-      <button class="btn-detail-back" id="btn-detail-back-bottom">
+      <button class="btn-detail-back" id="btn-detail-back-bottom" style="flex: 1; min-width: 0;">
         Keep Browsing
       </button>
-      <div>
+      <div style="flex: 1; min-width: 0; display: flex;">
         ${actionHtml}
       </div>
     </div>
@@ -895,7 +895,7 @@ function renderSellProperties() {
           `;
         }
       } else {
-        actionBtnHtml = `<button class="btn-detail-buy" disabled>Waiting for Turn</button>`;
+        actionBtnHtml = `<button class="btn-detail-buy" disabled>Wait Your Turn</button>`;
       }
     }
 
@@ -1111,7 +1111,7 @@ function renderMakeImprovements() {
         </button>
       `;
     } else if (!isMyTurn) {
-      actionBtnHtml = `<button class="btn-detail-buy" disabled>Waiting for Turn</button>`;
+      actionBtnHtml = `<button class="btn-detail-buy" disabled>Wait Your Turn</button>`;
     } else if (isPurchasedThisRound) {
       actionBtnHtml = `
         <button class="btn-detail-buy" disabled title="Cannot make improvements in the same round the property was purchased (Eligible Round ${currentRound + 1})">
@@ -1400,14 +1400,14 @@ function renderMortgagePayments() {
           </div>
         `;
       } else {
-        actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Waiting for Turn</button>`;
+        actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Wait Your Turn</button>`;
       }
     } else {
       statusBadge = `<span class="badge badge-due">DUE ROUND ${currentRound}</span>`;
       if (isMyTurn) {
         actionBtnHtml = `<button class="btn-pay-mortgage" data-slug="${catalog.slug}" data-double="false">Pay Mortgage (${formatMoney(basePayment)})</button>`;
       } else {
-        actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Waiting for Turn</button>`;
+        actionBtnHtml = `<button class="btn-pay-mortgage" disabled>Wait Your Turn</button>`;
       }
     }
 
