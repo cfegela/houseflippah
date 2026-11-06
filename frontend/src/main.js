@@ -528,9 +528,7 @@ function renderPropertyDetails(slug) {
   );
 
   let statusBadgeHtml = '';
-  if (isOwnedByMe) {
-    statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #0284c7; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">YOUR DEED</span></div>`;
-  } else if (!isBankOwned) {
+  if (!isBankOwned && !isOwnedByMe) {
     statusBadgeHtml = `<div style="position: absolute; top: 1rem; right: 1rem; z-index: 2;"><span class="badge" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid #475569; font-weight: 700; padding: 0.35rem 0.85rem; border-radius: 9999px;">OWNED BY SEAT ${ownerPlayer?.seat_number || '?'} (${escapeHtml(ownerPlayer?.display_name || 'Player')})</span></div>`;
   }
 
@@ -565,8 +563,8 @@ function renderPropertyDetails(slug) {
     }
   } else if (isOwnedByMe) {
     actionHtml = `
-      <button class="btn btn-secondary" id="btn-detail-goto-payments" style="padding: 0.85rem 1.5rem; font-weight: 700;">
-        Manage Mortgage Payments →
+      <button class="btn-detail-buy" disabled>
+        Purchased
       </button>
     `;
   } else {
@@ -1057,7 +1055,6 @@ function renderMortgagePayments() {
       <div class="mortgage-card-header">
         <div>
           <h3 style="font-size: 1.25rem; font-weight: 700;">${escapeHtml(catalog.name)}</h3>
-          <span style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(catalog.group_name)}</span>
         </div>
         ${statusBadge}
       </div>
