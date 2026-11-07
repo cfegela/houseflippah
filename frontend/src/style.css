@@ -2011,3 +2011,12 @@ input[type="number"] {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* Landing Copyright Notice */
+.landing-copyright {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-top: 1rem;
+  opacity: 0.8;
+}
