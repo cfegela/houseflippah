@@ -6,7 +6,7 @@
 
 Welcome to **houseflippah**, a turn-based real estate investing and flipping game for 1 to 4 players. Compete against other players to build wealth by financing real estate, making strategic renovations, managing mortgage payments, and flipping properties to automated buyers for maximum profit.
 
----
+
 
 ## 1. Setup & Starting Conditions
 
@@ -15,7 +15,7 @@ Welcome to **houseflippah**, a turn-based real estate investing and flipping gam
 * **Turn Order**: Gameplay proceeds sequentially by seat number (Seat 1, Seat 2, etc.).
 * **Rounds**: A round concludes once every player has completed their turn. The game then advances to the next round.
 
----
+
 
 ## 2. Buying Properties
 
@@ -24,7 +24,7 @@ Welcome to **houseflippah**, a turn-based real estate investing and flipping gam
 * **Purchase Limit**: You can only purchase **1 property per round**.
 * **Round 1 Mortgage Waiver**: The mortgage payment for the round in which a property is purchased is automatically covered.
 
----
+
 
 ## 3. Renovations & Improvements
 
@@ -44,7 +44,7 @@ Properties can be improved to increase their overall market value:
   * **No Same-Round Improvement**: You cannot make improvements to a property in the same round it was purchased (must hold for at least 1 round).
   * **No Listed Improvements**: You cannot improve a property that is currently listed for sale, nor can you improve a property in the same round it was delisted.
 
----
+
 
 ## 4. Mortgages, Delinquency & Foreclosure
 
@@ -58,7 +58,7 @@ Properties can be improved to increase their overall market value:
   * The foreclosed property returns to the bank-owned pool with its outstanding mortgage wiped clean.
   * **Improvements Preserved**: Any improvements already installed remain on the foreclosed property, maintaining its higher market value for anyone who purchases it from the bank.
 
----
+
 
 ## 5. Listing & Selling Properties
 
@@ -68,7 +68,7 @@ Properties can be improved to increase their overall market value:
 * **Minimum Asking Price**: Your list price must be at least equal to the property's remaining mortgage balance.
 * **Delisting**: An active listing can be delisted at any time during your turn.
 
----
+
 
 ## 6. The Automated Buyer Pool & Market Temperature
 
@@ -91,8 +91,6 @@ At the conclusion of each round, an automated pool of outside buyers evaluates a
   * The outstanding mortgage balance is automatically paid off first.
   * Net profits are credited directly to the player's cash on hand.
   * Sold properties are archived to the transaction ledger and permanently retired from circulation.
-
----
 
 ## 7. Winning the Game
 
