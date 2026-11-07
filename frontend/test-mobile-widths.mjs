@@ -233,6 +233,70 @@ async function run() {
               '</div>' +
             '</div>';
         `
+      },
+      {
+        name: 'Market Report View (Empty Purchases)',
+        setupJs: `
+          document.getElementById('game-financial-report-view').classList.add('hidden');
+          document.getElementById('game-market-report-view').classList.remove('hidden');
+          document.getElementById('market-report-container').innerHTML = \`
+            <div class="market-temperature-card">
+              <div class="market-temperature-label">Market Temperature</div>
+              <div class="market-temperature-val temp-toasty">Toasty</div>
+            </div>
+            <div class="sales-history-section">
+              <h3 class="sales-history-title">Sales History (0)</h3>
+              <div class="card placeholder-card" style="padding: 3rem 1.5rem;">
+                <h4 style="margin-bottom: 0.5rem; font-size: 1.25rem;">No Purchases Yet</h4>
+                <p style="color: var(--text-muted); max-width: 440px; margin: 0 auto; line-height: 1.5; font-size: 0.95rem;">
+                  No properties have been purchased yet this game.
+                </p>
+              </div>
+            </div>
+          \`;
+        `
+      },
+      {
+        name: 'Market Report View (Populated Sales History)',
+        setupJs: `
+          document.getElementById('market-report-container').innerHTML = \`
+            <div class="market-temperature-card">
+              <div class="market-temperature-label">Market Temperature</div>
+              <div class="market-temperature-val temp-on-fire">On Fire</div>
+            </div>
+            <div class="sales-history-section">
+              <h3 class="sales-history-title">Sales History (2)</h3>
+              <div class="sales-history-list">
+                <div class="sales-history-item">
+                  <div class="sales-history-stripe" style="background-color: #8B5A2B;"></div>
+                  <div class="sales-history-content">
+                    <div class="sales-history-prop-group">
+                      <span class="sales-history-prop-name">Mediterranean Avenue</span>
+                      <div class="sales-history-meta"><span>Buyer: Player 1</span></div>
+                    </div>
+                    <div class="sales-history-price-group">
+                      <span class="sales-history-price">$60,000</span>
+                      <span class="sales-history-badge">Round 1</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="sales-history-item">
+                  <div class="sales-history-stripe" style="background-color: #0ea5e9;"></div>
+                  <div class="sales-history-content">
+                    <div class="sales-history-prop-group">
+                      <span class="sales-history-prop-name">Oriental Avenue</span>
+                      <div class="sales-history-meta"><span>Buyer: Player 2</span></div>
+                    </div>
+                    <div class="sales-history-price-group">
+                      <span class="sales-history-price">$100,000</span>
+                      <span class="sales-history-badge">Round 2</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          \`;
+        `
       }
     ];
 

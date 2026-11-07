@@ -101,6 +101,12 @@ async function runTest() {
   if (startErr) throw new Error('start_game failed: ' + startErr.message);
   console.log('   ✓ Game started successfully. Status is in_progress, current turn is Seat 1, Round 1.');
 
+  const validTemps = ['Ice Cold', 'Chilly', 'Comfy', 'Toasty', 'On Fire'];
+  if (!validTemps.includes(startData.room.market_temperature)) {
+    throw new Error(`Expected valid initial market temperature, got ${startData.room.market_temperature}`);
+  }
+  console.log(`   ✓ Round 1 initial market temperature: "${startData.room.market_temperature}"`);
+
   // Check players cash = 100,000
   const { data: playersWithCash } = await p1.client.from('room_players').select('*').eq('room_id', roomId);
   const all100k = playersWithCash.every(p => p.cash === 100000);
@@ -193,6 +199,10 @@ async function runTest() {
   const round2Advance = await advanceFullRound();
   if (round2Advance.current_round !== 2) throw new Error(`Expected Round 2, got ${round2Advance.current_round}`);
   console.log(`   ✓ Round advanced to Round ${round2Advance.current_round}!`);
+  if (!validTemps.includes(round2Advance.room.market_temperature)) {
+    throw new Error(`Expected valid Round 2 market temperature, got ${round2Advance.room.market_temperature}`);
+  }
+  console.log(`   ✓ Round 2 market temperature randomized: "${round2Advance.room.market_temperature}"`);
 
   // In Round 2: Player 1 pays mortgage on Mediterranean ($60,000 / 40 = $1,500)
   const { data: payData, error: payErr } = await p1.client.rpc('make_mortgage_payment', {

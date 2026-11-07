@@ -164,6 +164,8 @@ const gameMakePaymentsView = document.getElementById('game-make-payments-view');
 const mortgagePaymentsContainer = document.getElementById('mortgage-payments-container');
 const gameFinancialReportView = document.getElementById('game-financial-report-view');
 const financialReportContainer = document.getElementById('financial-report-container');
+const gameMarketReportView = document.getElementById('game-market-report-view');
+const marketReportContainer = document.getElementById('market-report-container');
 
 // Improvements Catalog Definition
 const IMPROVEMENTS_CATALOG = [
@@ -396,8 +398,9 @@ function showGameSubpage(subpage, placeholderInfo = null) {
   currentGameSubpage = subpage;
   if (!gameDashboardView || !gameBuyPropertiesView || !gamePlaceholderView || !gameMakePaymentsView) return;
 
-  // The Financial Report is visible only on its own subpage
+  // The Financial Report and Market Report are visible only on their own subpages
   if (gameFinancialReportView) gameFinancialReportView.classList.toggle('hidden', subpage !== 'financial-report');
+  if (gameMarketReportView) gameMarketReportView.classList.toggle('hidden', subpage !== 'market-report');
 
   if (subpage === 'dashboard') {
     gameDashboardView.classList.remove('hidden');
@@ -461,6 +464,15 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.add('hidden');
     renderFinancialReport();
+  } else if (subpage === 'market-report') {
+    gameDashboardView.classList.add('hidden');
+    gameBuyPropertiesView.classList.add('hidden');
+    if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.add('hidden');
+    gamePlaceholderView.classList.add('hidden');
+    gameMakePaymentsView.classList.add('hidden');
+    renderMarketReport();
   } else if (subpage === 'placeholder') {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.add('hidden');
@@ -1667,6 +1679,85 @@ function renderFinancialReport() {
   `;
 }
 
+// --- Market Report View ---
+function renderMarketReport() {
+  if (!marketReportContainer) return;
+
+  const temperature = currentRoom?.market_temperature || 'Comfy';
+  let tempClass = 'temp-comfy';
+  if (temperature === 'Ice Cold') tempClass = 'temp-ice-cold';
+  else if (temperature === 'Chilly') tempClass = 'temp-chilly';
+  else if (temperature === 'Comfy') tempClass = 'temp-comfy';
+  else if (temperature === 'Toasty') tempClass = 'temp-toasty';
+  else if (temperature === 'On Fire') tempClass = 'temp-on-fire';
+
+  // 1. Market Temperature Card (Clean metric card, no icons, no selling odds)
+  const tempCardHtml = `
+    <div class="market-temperature-card">
+      <div class="market-temperature-label">Market Temperature</div>
+      <div class="market-temperature-val ${tempClass}">${escapeHtml(temperature)}</div>
+    </div>
+  `;
+
+  // 2. Sales History Section: Show all properties purchased, price, and round
+  const purchasedProperties = gameProperties
+    .filter((gp) => gp.purchased_round != null)
+    .sort((a, b) => (b.purchased_round || 0) - (a.purchased_round || 0));
+
+  let salesHistoryHtml = '';
+  if (purchasedProperties.length === 0) {
+    salesHistoryHtml = `
+      <div class="sales-history-section">
+        <h3 class="sales-history-title">Sales History (0)</h3>
+        <div class="card placeholder-card" style="padding: 3rem 1.5rem;">
+          <h4 style="margin-bottom: 0.5rem; font-size: 1.25rem;">No Purchases Yet</h4>
+          <p style="color: var(--text-muted); max-width: 440px; margin: 0 auto; line-height: 1.5; font-size: 0.95rem;">
+            No properties have been purchased yet this game. When properties are purchased from the bank or marketplace, each transaction, price, and round will appear here.
+          </p>
+        </div>
+      </div>
+    `;
+  } else {
+    const itemsHtml = purchasedProperties.map((gp) => {
+      const prop = catalogProperties.find((cp) => cp.slug === gp.property_slug);
+      if (!prop) return '';
+
+      const buyer = currentPlayers.find((p) => p.user_id === gp.owner_user_id);
+      const buyerName = buyer ? buyer.display_name : 'Player';
+      const price = gp.purchase_price || prop.cost;
+
+      return `
+        <div class="sales-history-item">
+          <div class="sales-history-stripe" style="background-color: ${prop.color_hex};"></div>
+          <div class="sales-history-content">
+            <div class="sales-history-prop-group">
+              <span class="sales-history-prop-name">${escapeHtml(prop.name)}</span>
+              <div class="sales-history-meta">
+                <span>Buyer: ${escapeHtml(buyerName)}</span>
+              </div>
+            </div>
+            <div class="sales-history-price-group">
+              <span class="sales-history-price">${formatMoney(price)}</span>
+              <span class="sales-history-badge">Round ${gp.purchased_round}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    salesHistoryHtml = `
+      <div class="sales-history-section">
+        <h3 class="sales-history-title">Sales History (${purchasedProperties.length})</h3>
+        <div class="sales-history-list">
+          ${itemsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  marketReportContainer.innerHTML = tempCardHtml + salesHistoryHtml;
+}
+
 // Realtime subscriptions
 function setupRealtimeSubscription(roomId) {
   if (unsubscribeRealtime) unsubscribeRealtime();
@@ -1685,8 +1776,8 @@ function setupRealtimeSubscription(roomId) {
           renderGameHUD();
           renderProperties();
           if (currentGameSubpage === 'make-payments') renderMortgagePayments();
-        if (currentGameSubpage === 'financial-report') renderFinancialReport();
           if (currentGameSubpage === 'financial-report') renderFinancialReport();
+          if (currentGameSubpage === 'market-report') renderMarketReport();
           if (currentGameSubpage === 'sell-properties') renderSellProperties();
           if (currentGameSubpage === 'make-improvements') {
             renderMakeImprovements();
@@ -1719,6 +1810,8 @@ function setupRealtimeSubscription(roomId) {
         renderGameHUD();
         renderProperties();
         if (currentGameSubpage === 'make-payments') renderMortgagePayments();
+        if (currentGameSubpage === 'financial-report') renderFinancialReport();
+        if (currentGameSubpage === 'market-report') renderMarketReport();
         if (currentGameSubpage === 'sell-properties') renderSellProperties();
         if (currentGameSubpage === 'make-improvements') {
           renderMakeImprovements();
@@ -1965,15 +2058,9 @@ if (cardNavMakePayments) {
 }
 
 if (cardNavMarketReport) {
-  cardNavMarketReport.addEventListener('click', () =>
-    showGameSubpage('placeholder', {
-      title: 'Market Report',
-      icon: '📈',
-      desc: 'Review market conditions and see recent transactions. This feature will be introduced in an upcoming phase.'
-    })
-  );
+  cardNavMarketReport.addEventListener('click', () => showGameSubpage('market-report'));
   cardNavMarketReport.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') cardNavMarketReport.click();
+    if (e.key === 'Enter' || e.key === ' ') showGameSubpage('market-report');
   });
 }
 

@@ -1862,3 +1862,152 @@ input[type="number"] {
 .bs-section-title.bs-equity-title {
   padding-bottom: 0.75rem;
 }
+
+/* Market Report - Market Temperature & Sales History */
+.market-report-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.market-temperature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 640px) {
+  .market-temperature-card {
+    padding: 1.5rem 1.5rem;
+  }
+}
+
+.market-temperature-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.market-temperature-val {
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+@media (min-width: 640px) {
+  .market-temperature-val {
+    font-size: 2.75rem;
+  }
+}
+
+.market-temperature-val.temp-ice-cold { color: #38bdf8; }
+.market-temperature-val.temp-chilly { color: #facc15; }
+.market-temperature-val.temp-comfy { color: #22c55e; }
+.market-temperature-val.temp-toasty { color: #f97316; }
+.market-temperature-val.temp-on-fire { color: #ef4444; }
+
+.sales-history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sales-history-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  padding: 0 0.25rem;
+}
+
+.sales-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sales-history-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.sales-history-stripe {
+  height: 4px;
+  width: 100%;
+}
+
+.sales-history-content {
+  padding: 0.85rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .sales-history-content {
+    padding: 1rem 1.25rem;
+  }
+}
+
+.sales-history-prop-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.sales-history-prop-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.sales-history-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sales-history-price-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.2rem;
+  text-align: right;
+}
+
+.sales-history-price {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #22c55e;
+  font-variant-numeric: tabular-nums;
+}
+
+.sales-history-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
