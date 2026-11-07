@@ -135,6 +135,10 @@ async function runTest() {
     throw new Error('Purchase price, market value, or improvements on purchase not properly initialized');
   }
   console.log(`   ✓ Purchase price ($60,000) & initial Market Value ($60,000) verified on deed.`);
+  if (buyData.property.mortgage_balance !== 54000) {
+    throw new Error(`Expected $54,000 initial mortgage balance (price - 10% down), got ${buyData.property.mortgage_balance}`);
+  }
+  console.log('   ✓ Initial mortgage balance ($54,000 = $60,000 price - $6,000 down) verified.');
 
   // Enforce Rule 2: Cannot buy a second property in the same round
   const { error: secondBuyErr } = await p1.client.rpc('buy_property', {
@@ -199,6 +203,10 @@ async function runTest() {
   if (payData.paid_amount !== 1500) throw new Error(`Expected $1,500 payment, got ${payData.paid_amount}`);
   if (payData.player.cash !== 92500) throw new Error(`Expected $92,500 cash, got ${payData.player.cash}`);
   console.log(`   ✓ Player 1 made 1/40th mortgage payment ($1,500)! Remaining cash: $${payData.player.cash}.`);
+  if (payData.property.mortgage_balance !== 52500) {
+    throw new Error(`Expected mortgage balance $52,500 after first payment, got ${payData.property.mortgage_balance}`);
+  }
+  console.log('   ✓ Mortgage balance reduced by payment ($54,000 -> $52,500).');
 
   // Test Make Improvements in Round 2:
   // Mediterranean purchase_price = $60,000. Cost = $6,000 (10%), Boost = $12,000 (20%).
@@ -360,6 +368,10 @@ async function runTest() {
     throw new Error('Expected $1,500 single payment with mortgage remaining delinquent!');
   }
   console.log('   ✓ Player 1 made single payment ($1,500) on delinquent Baltic Ave to stave off foreclosure!');
+  const balticBalanceAfterSingle = singlePayData.property.mortgage_balance;
+  if (balticBalanceAfterSingle !== balticCheck.mortgage_balance - 1500) {
+    throw new Error(`Expected Baltic balance to drop by $1,500, got ${balticCheck.mortgage_balance} -> ${balticBalanceAfterSingle}`);
+  }
 
   // Advance to Round 5: Verify Baltic Ave was NOT foreclosed and is still delinquent
   await advanceFullRound(); // -> Round 5 starts
@@ -380,6 +392,10 @@ async function runTest() {
     throw new Error('Expected $3,000 double payment to bring Baltic Ave current!');
   }
   console.log('   ✓ Player 1 made double payment ($3,000) and brought Baltic Ave mortgage current!');
+  if (doublePayData.property.mortgage_balance !== balticBalanceAfterSingle - 3000) {
+    throw new Error(`Expected Baltic balance to drop by $3,000 on double payment, got ${balticBalanceAfterSingle} -> ${doublePayData.property.mortgage_balance}`);
+  }
+  console.log('   ✓ Mortgage balance reduced correctly by single ($1,500) and double ($3,000) payments.');
 
   // Now test Foreclosure & Distressed Asset Improvement Preservation:
   // Player 1 buys Oriental Ave ($100k, $10k down) in Round 5
@@ -421,6 +437,10 @@ async function runTest() {
     throw new Error(`Expected foreclosure to maintain elevated market value $120,000, got ${orientalCheck.market_value}`);
   }
   console.log('   ✓ Foreclosure successfully preserved "windows_doors" improvement and $120,000 elevated market value!');
+  if (orientalCheck.mortgage_balance !== 0) {
+    throw new Error(`Expected foreclosed property mortgage balance to be cleared, got ${orientalCheck.mortgage_balance}`);
+  }
+  console.log('   ✓ Foreclosure cleared the mortgage balance to $0.');
 
   // In Round 8: Player 1 buys back the foreclosed Oriental Ave at base bank price ($100k, $10k down)
   const { data: buyBackData, error: buyBackErr } = await p1.client.rpc('buy_property', {
@@ -435,6 +455,10 @@ async function runTest() {
     throw new Error('Expected bought-back property to retain "windows_doors" improvement');
   }
   console.log('   ✓ Player 1 bought foreclosed Oriental Ave at base price ($100,000) with improvements & $120,000 market value intact!');
+  if (buyBackData.property.mortgage_balance !== 90000) {
+    throw new Error(`Expected new mortgage balance $90,000 on buy-back, got ${buyBackData.property.mortgage_balance}`);
+  }
+  console.log('   ✓ Bought-back property carries a fresh $90,000 mortgage balance.');
 
   // 9. Host ends the game for all players
   console.log('8. Host ends the game (leave_room as host)...');

@@ -205,6 +205,34 @@ async function run() {
             </div>
           \`;
         `
+      },
+      {
+        name: 'Financial Report View (Balance Sheet)',
+        setupJs: `
+          document.getElementById('game-make-payments-view').classList.add('hidden');
+          document.getElementById('game-financial-report-view').classList.remove('hidden');
+          const bsRow = (label, amt, cls = '', dot = '') => '<div class="bs-row ' + cls + '"><span class="bs-row-label">' + (dot ? '<span class="bs-dot" style="background-color:' + dot + ';"></span>' : '') + '<span class="bs-row-label-text">' + label + '</span></span><span class="bs-amount">' + amt + '</span></div>';
+          document.getElementById('financial-report-container').innerHTML =
+            '<div class="balance-sheet">' +
+              '<div class="bs-title-bar"><h3 class="bs-title">Balance Sheet</h3><div class="bs-subtitle">Round 12 • A Very Long Player Name</div></div>' +
+              '<div class="bs-section"><div class="bs-section-title">Assets</div>' +
+                '<div class="bs-group-title">Current Assets</div>' + bsRow('Cash (bank account)', '$1,234,567') +
+                '<div class="bs-group-title">Fixed Assets</div>' +
+                bsRow('Pennsylvania Avenue Extra Long Name Estate', '$1,200,000', '', '#16a34a') +
+                bsRow('Mediterranean Avenue', '$120,000', '', '#8B5A2B') +
+                bsRow('Total Fixed Assets', '$1,320,000', 'bs-subtotal') +
+                bsRow('Total Assets', '$2,554,567', 'bs-total') +
+              '</div>' +
+              '<div class="bs-section"><div class="bs-section-title">Liabilities</div>' +
+                '<div class="bs-group-title">Mortgages Payable</div>' + bsRow('Pennsylvania Avenue Extra Long Name Estate', '$1,080,000', '', '#16a34a') +
+                '<div class="bs-group-title">Past-Due Payments</div>' + bsRow('Mediterranean Avenue', '$1,500', '', '#8B5A2B') +
+                bsRow('Total Liabilities', '$1,081,500', 'bs-total') +
+              '</div>' +
+              '<div class="bs-section" style="border-bottom:none;padding-bottom:0;"><div class="bs-section-title">Equity</div>' +
+                bsRow('Owner Equity (Assets - Liabilities)', '$1,473,067', 'bs-total bs-equity-row') +
+              '</div>' +
+            '</div>';
+        `
       }
     ];
 

@@ -1682,3 +1682,183 @@ input[type="number"] {
     gap: 1rem;
   }
 }
+
+/* Financial Report - Balance Sheet */
+.financial-report-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.balance-sheet {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.bs-title-bar {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  background: #0f172a;
+}
+
+.bs-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.bs-subtitle {
+  margin-top: 2px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.bs-section {
+  padding: 0.5rem 0 0.25rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bs-section-title {
+  padding: 0.6rem 1rem 0.25rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.bs-group-title {
+  padding: 0.5rem 1rem 0.15rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.bs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.4rem 1rem 0.4rem 1.75rem;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.bs-row-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.bs-row-label-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bs-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.bs-amount {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.bs-row.bs-muted {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.bs-row.bs-subtotal {
+  padding-left: 1rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--border-color);
+  font-weight: 700;
+}
+
+.bs-row.bs-subtotal .bs-amount {
+  font-weight: 800;
+}
+
+.bs-row.bs-total {
+  padding: 0.75rem 1rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  background: rgba(56, 189, 248, 0.06);
+  border-top: 2px solid var(--border-color);
+}
+
+.bs-row.bs-total .bs-amount {
+  font-weight: 800;
+}
+
+.bs-amount.is-positive { color: #22c55e; }
+.bs-amount.is-negative { color: #f87171; }
+
+.bs-equity-row {
+  font-size: 1.15rem;
+}
+
+.bs-empty-link {
+  padding: 0.25rem 1rem 0.75rem 1.75rem;
+}
+
+@media (min-width: 640px) {
+  .bs-title-bar { padding: 1.1rem 1.5rem; }
+  .bs-section-title { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .bs-group-title { padding-left: 1.5rem; padding-right: 1.5rem; }
+  .bs-row { padding-left: 2.5rem; padding-right: 1.5rem; font-size: 1rem; }
+  .bs-row.bs-subtotal { padding-left: 1.5rem; }
+  .bs-row.bs-total { padding: 0.9rem 1.5rem; font-size: 1.15rem; }
+  .bs-empty-link { padding-left: 2.5rem; }
+}
+
+.financial-balance-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+.financial-balance-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.financial-balance-val {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: #22c55e;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+}
+
+@media (min-width: 640px) {
+  .financial-balance-card { padding: 1.5rem 1.5rem; }
+  .financial-balance-val { font-size: 2.75rem; }
+}
+
+.bs-section-title.bs-equity-title {
+  padding-bottom: 0.75rem;
+}

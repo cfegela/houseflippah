@@ -162,6 +162,8 @@ const gameMakeImprovementsView = document.getElementById('game-make-improvements
 const makeImprovementsContainer = document.getElementById('make-improvements-container');
 const gameMakePaymentsView = document.getElementById('game-make-payments-view');
 const mortgagePaymentsContainer = document.getElementById('mortgage-payments-container');
+const gameFinancialReportView = document.getElementById('game-financial-report-view');
+const financialReportContainer = document.getElementById('financial-report-container');
 
 // Improvements Catalog Definition
 const IMPROVEMENTS_CATALOG = [
@@ -394,6 +396,9 @@ function showGameSubpage(subpage, placeholderInfo = null) {
   currentGameSubpage = subpage;
   if (!gameDashboardView || !gameBuyPropertiesView || !gamePlaceholderView || !gameMakePaymentsView) return;
 
+  // The Financial Report is visible only on its own subpage
+  if (gameFinancialReportView) gameFinancialReportView.classList.toggle('hidden', subpage !== 'financial-report');
+
   if (subpage === 'dashboard') {
     gameDashboardView.classList.remove('hidden');
     gameBuyPropertiesView.classList.add('hidden');
@@ -447,6 +452,15 @@ function showGameSubpage(subpage, placeholderInfo = null) {
     gamePlaceholderView.classList.add('hidden');
     gameMakePaymentsView.classList.remove('hidden');
     renderMortgagePayments();
+  } else if (subpage === 'financial-report') {
+    gameDashboardView.classList.add('hidden');
+    gameBuyPropertiesView.classList.add('hidden');
+    if (gamePropertyDetailsView) gamePropertyDetailsView.classList.add('hidden');
+    if (gameSellPropertiesView) gameSellPropertiesView.classList.add('hidden');
+    if (gameMakeImprovementsView) gameMakeImprovementsView.classList.add('hidden');
+    gamePlaceholderView.classList.add('hidden');
+    gameMakePaymentsView.classList.add('hidden');
+    renderFinancialReport();
   } else if (subpage === 'placeholder') {
     gameDashboardView.classList.add('hidden');
     gameBuyPropertiesView.classList.add('hidden');
@@ -1562,6 +1576,97 @@ function renderMortgagePayments() {
   });
 }
 
+// --- Financial Report (Balance Sheet) ---
+function renderFinancialReport() {
+  if (!financialReportContainer) return;
+
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  const cash = myPlayer ? myPlayer.cash : 0;
+  const myProperties = gameProperties.filter((gp) => gp.owner_user_id === currentUser?.id);
+
+  // Build one line item per owned property
+  const items = myProperties
+    .map((gp) => {
+      const prop = catalogProperties.find((cp) => cp.slug === gp.property_slug);
+      if (!prop) return null;
+      const purchasePrice = gp.purchase_price || prop.cost;
+      const marketValue = gp.market_value || purchasePrice;
+      const mortgageBalance = Math.max(0, gp.mortgage_balance || 0);
+      // Each missed payment is one 1/40th installment; it is part of the balance owed
+      const pastDue = Math.min(mortgageBalance, (gp.missed_payments || 0) * Math.floor(prop.cost / 40));
+      return {
+        name: prop.name,
+        color: prop.color_hex,
+        marketValue,
+        mortgageBalance,
+        pastDue,
+        current: mortgageBalance - pastDue
+      };
+    })
+    .filter(Boolean);
+
+  const totalFixedAssets = items.reduce((sum, i) => sum + i.marketValue, 0);
+  const totalAssets = cash + totalFixedAssets;
+  const totalMortgages = items.reduce((sum, i) => sum + i.current, 0);
+  const totalPastDue = items.reduce((sum, i) => sum + i.pastDue, 0);
+  const totalLiabilities = totalMortgages + totalPastDue;
+  const equity = totalAssets - totalLiabilities;
+
+  const row = (label, amount, { dot, cls = '', amountCls = '' } = {}) => `
+    <div class="bs-row ${cls}">
+      <span class="bs-row-label">
+        ${dot ? `<span class="bs-dot" style="background-color: ${dot};"></span>` : ''}
+        <span class="bs-row-label-text">${label}</span>
+      </span>
+      <span class="bs-amount ${amountCls}">${amount}</span>
+    </div>`;
+
+  const fixedAssetRows = items.length
+    ? items.map((i) => row(escapeHtml(i.name), formatMoney(i.marketValue), { dot: i.color })).join('')
+    : row('No property assets owned yet', formatMoney(0), { cls: 'bs-muted' });
+
+  const mortgageRows = items.filter((i) => i.current > 0)
+    .map((i) => row(escapeHtml(i.name), formatMoney(i.current), { dot: i.color })).join('');
+  const pastDueRows = items.filter((i) => i.pastDue > 0)
+    .map((i) => row(escapeHtml(i.name), formatMoney(i.pastDue), { dot: i.color })).join('');
+
+  financialReportContainer.innerHTML = `
+    <div class="financial-balance-card">
+      <div class="financial-balance-label">Bank Account Balance</div>
+      <div class="financial-balance-val">${formatMoney(cash)}</div>
+    </div>
+    <div class="balance-sheet">
+      <div class="bs-title-bar">
+        <h3 class="bs-title">Balance Sheet</h3>
+      </div>
+
+      <div class="bs-section">
+        <div class="bs-section-title">Assets</div>
+        <div class="bs-group-title">Current Assets</div>
+        ${row('Cash (bank account)', formatMoney(cash))}
+        <div class="bs-group-title">Fixed Assets</div>
+        ${fixedAssetRows}
+        ${row('Total Fixed Assets', formatMoney(totalFixedAssets), { cls: 'bs-subtotal' })}
+        ${row('Total Assets', formatMoney(totalAssets), { cls: 'bs-total', amountCls: 'is-positive' })}
+      </div>
+
+      <div class="bs-section">
+        <div class="bs-section-title">Liabilities</div>
+        <div class="bs-group-title">Mortgages Payable</div>
+        ${mortgageRows || row('None', formatMoney(0), { cls: 'bs-muted' })}
+        <div class="bs-group-title">Past-Due Payments</div>
+        ${pastDueRows || row('None', formatMoney(0), { cls: 'bs-muted' })}
+        ${row('Total Liabilities', formatMoney(totalLiabilities), { cls: 'bs-total', amountCls: totalLiabilities > 0 ? 'is-negative' : '' })}
+      </div>
+
+      <div class="bs-section" style="border-bottom: none; padding-bottom: 0;">
+        <div class="bs-section-title bs-equity-title">Equity</div>
+        ${row('Owner Equity (Assets - Liabilities)', formatMoney(equity), { cls: 'bs-total bs-equity-row', amountCls: equity >= 0 ? 'is-positive' : 'is-negative' })}
+      </div>
+    </div>
+  `;
+}
+
 // Realtime subscriptions
 function setupRealtimeSubscription(roomId) {
   if (unsubscribeRealtime) unsubscribeRealtime();
@@ -1580,6 +1685,8 @@ function setupRealtimeSubscription(roomId) {
           renderGameHUD();
           renderProperties();
           if (currentGameSubpage === 'make-payments') renderMortgagePayments();
+        if (currentGameSubpage === 'financial-report') renderFinancialReport();
+          if (currentGameSubpage === 'financial-report') renderFinancialReport();
           if (currentGameSubpage === 'sell-properties') renderSellProperties();
           if (currentGameSubpage === 'make-improvements') {
             renderMakeImprovements();
@@ -1871,15 +1978,9 @@ if (cardNavMarketReport) {
 }
 
 if (cardNavFinancialReport) {
-  cardNavFinancialReport.addEventListener('click', () =>
-    showGameSubpage('placeholder', {
-      title: 'Financial Report',
-      icon: '📊',
-      desc: 'Check your account balance and review spending. This feature will be introduced in an upcoming phase.'
-    })
-  );
+  cardNavFinancialReport.addEventListener('click', () => showGameSubpage('financial-report'));
   cardNavFinancialReport.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') cardNavFinancialReport.click();
+    if (e.key === 'Enter' || e.key === ' ') showGameSubpage('financial-report');
   });
 }
 
