@@ -20,7 +20,7 @@ Welcome to **houseflippah**, a turn-based real estate investing and flipping gam
 ## 2. Buying Properties
 
 * **Bank-Owned Properties**: 28 properties are initially available in the public catalog.
-* **Financing (10% Down)**: Properties are purchased with a **10% cash down payment**. The remaining 90% is financed into a 40-round mortgage.
+* **Financing (10% Down)**: Properties are purchased with a **10% cash down payment**. Then 40 payments of 1/40th the purchase price (effectively a simple 10% interest rate)
 * **Purchase Limit**: You can only purchase **1 property per round**.
 * **Round 1 Mortgage Waiver**: The mortgage payment for the round in which a property is purchased is automatically covered.
 
