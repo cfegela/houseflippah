@@ -82,8 +82,9 @@ At the conclusion of each round, an automated pool of outside buyers evaluates a
   * 🔥 **On Fire**: 50% base sale odds
 
 * **Pricing vs. Market Value**:
-  * Listing **at or below market value** guarantees full base odds for the current temperature.
-  * Listing **above market value** applies a pricing penalty that scales down the likelihood of a buyer purchasing the property.
+  * Listing **at market value** sells at the round's exact base odds.
+  * Listing **below market value** **increases** the odds of selling proportional to the discount (e.g. pricing 20% below market value boosts sale odds by 20%, up to a maximum of 100%).
+  * Listing **above market value** **decreases** the odds of selling proportional to the markup (e.g. pricing 20% above market value reduces sale odds by 20%).
 
 * **Sales Settlement**:
   * When a property sells, the automated buyer pays the full asking price.
