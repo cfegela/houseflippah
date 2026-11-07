@@ -262,8 +262,8 @@ async function runTest() {
   }
   console.log(`   ✓ Invalid improvement key prevented: "${invalidImpErr.message}"`);
 
-  // Install remaining 4 improvements in the same round (testing all 5 in one round)
-  const remainingImprovements = ['hvac_mechanicals', 'roof_siding', 'flooring_painting', 'kitchen_baths'];
+  // Install 3 more improvements in the same round (testing multiple in one round, leaving 1 for Round 3 listed tests)
+  const remainingImprovements = ['hvac_mechanicals', 'roof_siding', 'flooring_painting'];
   for (const impKey of remainingImprovements) {
     const { error } = await p1.client.rpc('make_improvement', {
       p_room_id: roomId,
@@ -273,20 +273,20 @@ async function runTest() {
     if (error) throw new Error(`Failed to install ${impKey}: ${error.message}`);
   }
 
-  // Verify final fully renovated property
-  const { data: finalMedCheck } = await p1.client
+  // Verify property has 4 improvements
+  const { data: medCheck4 } = await p1.client
     .from('game_properties')
     .select('*')
     .eq('room_id', roomId)
     .eq('property_slug', 'mediterranean-ave')
     .single();
-  if (finalMedCheck.improvements.length !== 5) {
-    throw new Error(`Expected 5 improvements, got ${finalMedCheck.improvements.length}`);
+  if (medCheck4.improvements.length !== 4) {
+    throw new Error(`Expected 4 improvements, got ${medCheck4.improvements.length}`);
   }
-  if (finalMedCheck.market_value !== 120000) {
-    throw new Error(`Expected market_value $120,000 (2x / +100%), got ${finalMedCheck.market_value}`);
+  if (medCheck4.market_value !== 108000) {
+    throw new Error(`Expected market_value $108,000, got ${medCheck4.market_value}`);
   }
-  console.log('   ✓ Successfully installed all 5 improvements in Round 2! Market value doubled from $60,000 to $120,000 (Max Upgraded)!');
+  console.log('   ✓ Successfully installed 4 improvements in Round 2! Market value boosted to $108,000.');
 
   // Rule test: Player 1 cannot list Mediterranean in Round 2 because improvements were made in Round 2!
   const { error: listAfterImpErr } = await p1.client.rpc('list_property', {
@@ -305,7 +305,18 @@ async function runTest() {
   // Advance from Round 2 to Round 3 (Player 1 skips payment on Baltic Ave)
   await advanceFullRound(); // -> Round 3 starts
 
-  // In Round 3: Listing Mediterranean Ave is now permitted because last_improved_round (2) < current_round (3)
+  // In Round 3: Baltic Ave is unimproved -> verify new rule: cannot list an unimproved property!
+  const { error: listUnimprovedErr } = await p1.client.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: 'baltic-ave',
+    p_list_price: 70000
+  });
+  if (!listUnimprovedErr || !listUnimprovedErr.message.includes('unimproved property')) {
+    throw new Error(`Expected unimproved property listing restriction! Got: ${listUnimprovedErr?.message}`);
+  }
+  console.log(`   ✓ Unimproved property listing restriction enforced: "${listUnimprovedErr.message}"`);
+
+  // In Round 3: Listing Mediterranean Ave is permitted because it is improved (4/5) and last_improved_round (2) < current_round (3)
   const { data: listData, error: listErr } = await p1.client.rpc('list_property', {
     p_room_id: roomId,
     p_property_slug: 'mediterranean-ave',
@@ -313,6 +324,17 @@ async function runTest() {
   });
   if (listErr) throw listErr;
   console.log('   ✓ Listing permitted in subsequent Round 3 for $125,000!');
+
+  // Attempt to improve actively listed property
+  const { error: improveListedErr } = await p1.client.rpc('make_improvement', {
+    p_room_id: roomId,
+    p_property_slug: 'mediterranean-ave',
+    p_improvement_key: 'kitchen_baths'
+  });
+  if (!improveListedErr || !improveListedErr.message.includes('actively listed')) {
+    throw new Error('Expected actively listed improvement restriction error!');
+  }
+  console.log(`   ✓ Actively listed improvement restriction enforced: "${improveListedErr.message}"`);
 
   // Test delist_property
   const { data: delistData, error: delistErr } = await p1.client.rpc('delist_property', {
@@ -325,34 +347,11 @@ async function runTest() {
   }
   console.log('   ✓ Property successfully delisted via delist_property RPC!');
 
-  // Test listing and improving same round restrictions on Baltic Ave (purchased Round 2, now Round 3):
-  await p1.client.rpc('list_property', {
-    p_room_id: roomId,
-    p_property_slug: 'baltic-ave',
-    p_list_price: 100000
-  });
-
-  // Attempt to improve actively listed property
-  const { error: improveListedErr } = await p1.client.rpc('make_improvement', {
-    p_room_id: roomId,
-    p_property_slug: 'baltic-ave',
-    p_improvement_key: 'windows_doors'
-  });
-  if (!improveListedErr || !improveListedErr.message.includes('actively listed')) {
-    throw new Error('Expected actively listed improvement restriction error!');
-  }
-  console.log(`   ✓ Actively listed improvement restriction enforced: "${improveListedErr.message}"`);
-
-  // Delist Baltic Ave and attempt to improve in the same round it was listed
-  await p1.client.rpc('delist_property', {
-    p_room_id: roomId,
-    p_property_slug: 'baltic-ave'
-  });
-
+  // Attempt to improve in the same round it was listed
   const { error: improveSameRoundListedErr } = await p1.client.rpc('make_improvement', {
     p_room_id: roomId,
-    p_property_slug: 'baltic-ave',
-    p_improvement_key: 'windows_doors'
+    p_property_slug: 'mediterranean-ave',
+    p_improvement_key: 'kitchen_baths'
   });
   if (!improveSameRoundListedErr || !improveSameRoundListedErr.message.includes('same round it was listed')) {
     throw new Error('Expected same round listed improvement restriction error!');
