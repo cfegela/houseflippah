@@ -2,95 +2,97 @@
   <img src="frontend/public/houseflippah-logo.svg" alt="houseflippah logo" width="420" />
 </p>
 
-<p align="center">
-  <strong>A fresh take on a stale board game.</strong><br>
-  Real-time online multiplayer game for 2 to 4 players with seamless guest access, transactional room joining, and real-time state synchronization.
-</p>
+# Game Rules
+
+Welcome to **houseflippah**, a turn-based real estate investing and flipping game for 1 to 4 players. Compete against other players to build wealth by financing real estate, making strategic renovations, managing mortgage payments, and flipping properties to automated buyers for maximum profit.
 
 ---
 
-## Architecture Overview
+## 1. Setup & Starting Conditions
 
-* **Frontend**: Vanilla JavaScript (ES modules) bundled with [Vite](https://vitejs.dev/) — zero heavy runtime frameworks, fast local HMR, and builds static assets (`dist/`) ready for deployment to any CDN (Cloudflare Pages, Vercel, Netlify).
-* **Backend**: [Supabase](https://supabase.com/) running PostgreSQL, GoTrue Auth (Anonymous Sign-Ins), Realtime engine, and Row-Level Security (RLS).
-* **Container Runtime**: [Podman](https://podman.io/) (aliased to Docker via Homebrew).
-* **Concurrency & Integrity**: Atomic Postgres stored procedures (`create_room`, `join_room`, `leave_room`) utilizing row-level locking (`SELECT ... FOR UPDATE`) to guarantee that the strict 4-player room cap can never be exceeded by simultaneous join attempts.
-
----
-
-## Features
-
-* **Instant Guest Onboarding**: Players do not need an email or password. Supabase Anonymous Auth provides a real session token and cryptographic UID saved in browser storage.
-* **UUID Invite Links**: The host starts a game and receives a shareable link (e.g. `http://localhost:5173/?room=<UUID>`).
-* **Host vs. Guest Lobby Experience**:
-  * **Host**: Manages the lobby, copies invite links, sees player count, and controls "Start Game" (enabled once 2–4 players join) and "End Game".
-  * **Guests**: See their assigned seats and a live connection indicator while waiting for the host to start.
-* **Seat Recycling & Abandonment**: When a player leaves or the host ends a game, seats are immediately freed and room status transitions smoothly in real time.
-* **Abuse Prevention**:
-  * Strict database-level check constraints and transaction locks.
-  * Rate-limiting on room creation per anonymous UID.
-  * Input validation and sanitization for usernames (1–20 characters).
+* **Players**: 1 to 4 players per room.
+* **Starting Bankroll**: Each player begins the game with **$100,000 in cash**.
+* **Turn Order**: Gameplay proceeds sequentially by seat number (Seat 1, Seat 2, etc.).
+* **Rounds**: A round concludes once every player has completed their turn. The game then advances to the next round.
 
 ---
 
-## Getting Started Locally
+## 2. Buying Properties
 
-### Prerequisites
-
-* **Node.js** (v20+ recommended, v26 installed) & **npm**
-* **Podman** (with machine initialized and started)
-* **Supabase CLI** (`brew install supabase/tap/supabase`)
-
-### 1. Start the Backend (Supabase)
-
-```bash
-# 1. Ensure the Podman VM is running
-podman machine start
-
-# 2. Start the local Supabase stack
-supabase start
-```
-
-Once started, the local backend endpoints will be available:
-* **Supabase Studio (Dashboard)**: [http://127.0.0.1:54323](http://127.0.0.1:54323)
-* **API / Kong Gateway**: [http://127.0.0.1:54321](http://127.0.0.1:54321)
-* **Database**: `postgresql://postgres:postgres@127.0.0.1:54322/postgres`
-
-### 2. Start the Frontend Dev Server
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Visit **[http://localhost:5173](http://localhost:5173)** in your browser.
+* **Bank-Owned Properties**: 28 properties are initially available in the public catalog.
+* **Financing (10% Down)**: Properties are purchased with a **10% cash down payment**. The remaining 90% is financed into a 40-round mortgage.
+* **Purchase Limit**: You can only purchase **1 property per round**.
+* **Round 1 Mortgage Waiver**: The mortgage payment for the round in which a property is purchased is automatically covered.
 
 ---
 
-## Automated Joining Workflow Tests
+## 3. Renovations & Improvements
 
-The project includes an end-to-end integration test that simulates 5 concurrent anonymous players joining, capacity rejection, seat recycling, and name sanitization:
-
-```bash
-cd frontend
-npm test
-```
-
-Test coverage includes:
-1. Creating 5 isolated anonymous player sessions.
-2. Room creation by Host (assigned to Seat 1).
-3. Players 2, 3, and 4 joining (Seats 2, 3, 4).
-4. Player 5 joining a full 4/4 room $\rightarrow$ **strictly rejected with capacity error**.
-5. Player 3 leaving the room $\rightarrow$ Seat 3 freed.
-6. Player 5 re-attempting join $\rightarrow$ **successfully seated in the freed slot**.
-7. Input sanitization validation on invalid display names.
+Properties can be improved to increase their overall market value:
+* **Eligible Upgrades**: Each property supports up to 5 distinct renovation tiers:
+  1. *Windows & Doors*
+  2. *HVAC & Mechanicals*
+  3. *Roof & Siding*
+  4. *Flooring & Painting*
+  5. *Kitchen & Bathrooms*
+* **Costs & Value Boost**:
+  * Each improvement costs **10% of the property's original purchase price**.
+  * Each installed improvement boosts the property's market value by **20% of its original purchase price**.
+  * Fully renovated properties double their base value (+100% market value).
+  * Each specific improvement can only be installed once per property.
+* **Timing & Holding Restrictions**:
+  * **No Same-Round Improvement**: You cannot make improvements to a property in the same round it was purchased (must hold for at least 1 round).
+  * **No Listed Improvements**: You cannot improve a property that is currently listed for sale, nor can you improve a property in the same round it was delisted.
 
 ---
 
-## Production Deployment
+## 4. Mortgages, Delinquency & Foreclosure
 
-* **Backend**: Link to your Supabase Cloud project (`supabase link --project-ref <id>`) and push migrations (`supabase db push`).
-* **Frontend**: Build production assets with `npm run build` inside `frontend/` and point your CDN provider (Cloudflare Pages, Netlify, Vercel) to the `dist/` directory with environment variables:
-  * `VITE_SUPABASE_URL`
-  * `VITE_SUPABASE_ANON_KEY`
+* **Mortgage Payments**: Starting the round following purchase, each owned property requires a mortgage payment equal to **1/40th of its original purchase price**.
+* **Delinquency**:
+  * If a player fails to make the mortgage payment during a round, the property becomes **delinquent** (1 missed payment).
+  * Delinquent properties can be brought current by making a double payment (or kept afloat by making a single payment).
+* **Foreclosure**:
+  * If a delinquent property misses a second consecutive mortgage payment, the bank **forecloses** on the property.
+  * The defaulting owner loses the deed and all equity.
+  * The foreclosed property returns to the bank-owned pool with its outstanding mortgage wiped clean.
+  * **Improvements Preserved**: Any improvements already installed remain on the foreclosed property, maintaining its higher market value for anyone who purchases it from the bank.
+
+---
+
+## 5. Listing & Selling Properties
+
+* **Improvement Required**: You **cannot list an unimproved property**. At least one improvement must be completed before listing.
+* **No Same-Round Listing**: You cannot list a property in the same round it was purchased.
+* **No Same-Round Improve & List**: You cannot list a property in the same round improvements were made to it.
+* **Minimum Asking Price**: Your list price must be at least equal to the property's remaining mortgage balance.
+* **Delisting**: An active listing can be delisted at any time during your turn.
+
+---
+
+## 6. The Automated Buyer Pool & Market Temperature
+
+At the conclusion of each round, an automated pool of outside buyers evaluates all actively listed properties:
+
+* **Market Temperatures**: Each round features a market temperature that sets the base odds of a property selling:
+  * 🧊 **Ice Cold**: 10% base sale odds
+  * 🧣 **Chilly**: 20% base sale odds
+  * ⛅ **Comfy**: 30% base sale odds
+  * ☀️ **Toasty**: 40% base sale odds
+  * 🔥 **On Fire**: 50% base sale odds
+
+* **Pricing vs. Market Value**:
+  * Listing **at or below market value** guarantees full base odds for the current temperature.
+  * Listing **above market value** applies a pricing penalty that scales down the likelihood of a buyer purchasing the property.
+
+* **Sales Settlement**:
+  * When a property sells, the automated buyer pays the full asking price.
+  * The outstanding mortgage balance is automatically paid off first.
+  * Net profits are credited directly to the player's cash on hand.
+  * Sold properties are archived to the transaction ledger and permanently retired from circulation.
+
+---
+
+## 7. Winning the Game
+
+Play strategically to balance mortgage obligations, reinvest cash into high-yield renovations, and time the market to flip your real estate portfolio for maximum net worth!
