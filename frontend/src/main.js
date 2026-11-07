@@ -1221,13 +1221,8 @@ function renderSellProperties() {
       </div>
       <div class="property-detail-body">
         <div class="property-detail-header-row">
-          <div class="property-detail-title-group" style="display: flex; align-items: center; justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 0.5rem;">
+          <div class="property-detail-title-group">
             <h3 style="margin: 0;">${escapeHtml(prop.name)}</h3>
-            ${
-              isUnimproved
-                ? `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); font-weight: 700; font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 9999px;">UNIMPROVED (0/5)</span>`
-                : `<span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.35); font-weight: 700; font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 9999px;">UPGRADED (${installedImprovements.length}/5)</span>`
-            }
           </div>
         </div>
 
@@ -1249,12 +1244,6 @@ function renderSellProperties() {
           <div class="property-detail-stat">
             <span class="property-detail-stat-label">Mortgage / Round</span>
             <span class="property-detail-stat-val" style="color: #38bdf8;">${formatMoney(roundMortgage)}</span>
-          </div>
-          <div class="property-detail-stat">
-            <span class="property-detail-stat-label">Improvements</span>
-            <span class="property-detail-stat-val" style="${isUnimproved ? 'color: #f59e0b;' : 'color: #22c55e;'}">
-              ${installedImprovements.length} of 5
-            </span>
           </div>
           <div class="property-detail-stat">
             <span class="property-detail-stat-label">Layout & Size</span>
@@ -1309,13 +1298,6 @@ function renderSellProperties() {
 // List Property Modal Logic
 function openListModal(prop, gp) {
   if (!prop || !currentRoom) return;
-
-  const installedCount = Array.isArray(gp?.improvements) ? gp.improvements.length : 0;
-  if (!gp?.is_listed && installedCount === 0) {
-    showAlert('You cannot list an unimproved property. Make at least one improvement before listing.');
-    return;
-  }
-
   pendingListProperty = prop;
 
   const marketVal = gp?.market_value || prop.cost;
@@ -1357,15 +1339,6 @@ if (listPropertyModal) {
 if (btnConfirmListProperty) {
   btnConfirmListProperty.addEventListener('click', async () => {
     if (!pendingListProperty || !currentRoom) return;
-
-    const currentGp = gameProperties.find((g) => g.property_slug === pendingListProperty.slug);
-    const installedCount = Array.isArray(currentGp?.improvements) ? currentGp.improvements.length : 0;
-    if (!currentGp?.is_listed && installedCount === 0) {
-      showAlert('You cannot list an unimproved property. Make at least one improvement before listing.');
-      closeListModal();
-      return;
-    }
-
     const askingPrice = parseInt(modalListPriceInput.value, 10);
     if (!askingPrice || askingPrice <= 0 || askingPrice > 10000000) {
       showAlert('Please enter a valid asking price between $1 and $10,000,000.');
