@@ -166,6 +166,104 @@ async function playBoxingBell() {
   }
 }
 
+async function playCashRegisterSound() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      await ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+
+    // 1. Mechanical Drawer Latch Click
+    const clickOsc = ctx.createOscillator();
+    const clickGain = ctx.createGain();
+    clickOsc.type = 'triangle';
+    clickOsc.frequency.setValueAtTime(320, now);
+    clickOsc.frequency.exponentialRampToValueAtTime(80, now + 0.035);
+    clickGain.gain.setValueAtTime(0.0001, now);
+    clickGain.gain.exponentialRampToValueAtTime(0.2, now + 0.003);
+    clickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+    clickOsc.connect(clickGain);
+    clickGain.connect(ctx.destination);
+    clickOsc.start(now);
+    clickOsc.stop(now + 0.04);
+
+    // 2. Bell Chimes: "Cha - CHING!"
+    // Strike 1: "cha" at now + 0.04s
+    const bell1Time = now + 0.04;
+    [1760, 2640].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, bell1Time);
+      gain.gain.setValueAtTime(0.0001, bell1Time);
+      gain.gain.exponentialRampToValueAtTime(idx === 0 ? 0.22 : 0.08, bell1Time + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, bell1Time + 0.16);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(bell1Time);
+      osc.stop(bell1Time + 0.18);
+    });
+
+    // Strike 2: the bright resonant "CHING!" at now + 0.12s
+    const bell2Time = now + 0.12;
+    [
+      { freq: 2637, gainVal: 0.32, dur: 0.7 },  // Main ringing E7
+      { freq: 3955, gainVal: 0.14, dur: 0.45 }, // B7 overtone
+      { freq: 5274, gainVal: 0.08, dur: 0.25 }  // E8 high sparkle
+    ].forEach(({ freq, gainVal, dur }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, bell2Time);
+      gain.gain.setValueAtTime(0.0001, bell2Time);
+      gain.gain.exponentialRampToValueAtTime(gainVal, bell2Time + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.0001, bell2Time + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(bell2Time);
+      osc.stop(bell2Time + dur + 0.02);
+    });
+
+    // 3. Coin Jingle / Metallic Shimmer Noise Burst
+    const bufferSize = Math.floor(ctx.sampleRate * 0.28);
+    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const output = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+
+    const whiteNoise = ctx.createBufferSource();
+    whiteNoise.buffer = noiseBuffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(6200, now + 0.07);
+    filter.Q.setValueAtTime(3.5, now + 0.07);
+
+    const noiseGain = ctx.createGain();
+    const noiseTime = now + 0.07;
+    noiseGain.gain.setValueAtTime(0.0001, noiseTime);
+    noiseGain.gain.exponentialRampToValueAtTime(0.12, noiseTime + 0.015);
+    noiseGain.gain.exponentialRampToValueAtTime(0.0001, noiseTime + 0.26);
+
+    whiteNoise.connect(filter);
+    filter.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+
+    whiteNoise.start(noiseTime);
+    whiteNoise.stop(noiseTime + 0.28);
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([40, 30, 90]);
+    }
+  } catch (err) {
+    console.warn('Could not play cash register sound:', err);
+  }
+}
+
 // DOM Elements - Alerts
 const alertBox = document.getElementById('alert-box');
 const alertMsg = document.getElementById('alert-msg');
@@ -983,6 +1081,7 @@ if (btnConfirmPurchase) {
 
     try {
       await buyProperty(currentRoom.id, propToBuy.slug);
+      playCashRegisterSound();
       closePurchaseModal();
 
       const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
@@ -1477,6 +1576,7 @@ function renderImproveModalContent() {
         installBtn.textContent = 'Installing...';
         try {
           await makeImprovement(currentRoom.id, prop.slug, imp.key);
+          playCashRegisterSound();
           const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
           currentRoom = room;
           currentPlayers = players;
@@ -1642,6 +1742,7 @@ function renderMortgagePayments() {
 
         try {
           await makeMortgagePayment(currentRoom.id, catalog.slug, isDouble);
+          playCashRegisterSound();
           const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
           currentRoom = room;
           currentPlayers = players;
