@@ -233,6 +233,31 @@
         </div>
       </div>
 
+      <!-- Market Sales Modal (Turn Start Notification) -->
+      <div id="market-sales-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 520px; text-align: left; width: 100%;">
+          <div style="margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+              <span style="font-size: 1.5rem;">🏷️</span>
+              <h3 style="font-size: 1.35rem; font-weight: 800; margin: 0;" id="modal-sales-title">Round Sales Report</h3>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.45;" id="modal-sales-subtitle">
+              Automated buyers reviewed the market at the end of the round.
+            </p>
+          </div>
+
+          <div id="modal-sales-content" style="max-height: 55vh; overflow-y: auto; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Dynamically populated sales list -->
+          </div>
+
+          <div class="actions-row" style="justify-content: flex-end;">
+            <button id="btn-close-sales-modal" class="btn btn-primary" style="width: 100%; padding: 0.8rem; font-size: 1rem; font-weight: 700;">
+              Continue to Turn
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- VIEW 2: GAME LOBBY -->
       <main id="lobby-view" class="hidden">
         <div class="card">

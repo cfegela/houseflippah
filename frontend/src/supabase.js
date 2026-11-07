@@ -204,14 +204,15 @@ export async function endTurn(roomId) {
 }
 
 /**
- * Fetch full game data (room, players, catalog, and room property instances).
+ * Fetch full game data (room, players, catalog, room property instances, and property sales).
  */
 export async function fetchGameData(roomId) {
-  const [roomRes, playersRes, catalogRes, gamePropsRes] = await Promise.all([
+  const [roomRes, playersRes, catalogRes, gamePropsRes, salesRes] = await Promise.all([
     supabase.from('rooms').select('*').eq('id', roomId).single(),
     supabase.from('room_players').select('*').eq('room_id', roomId).order('seat_number', { ascending: true }),
     supabase.from('catalog_properties').select('*').order('board_position', { ascending: true }),
     supabase.from('game_properties').select('*').eq('room_id', roomId),
+    supabase.from('property_sales').select('*').eq('room_id', roomId).order('round_number', { ascending: false }).order('created_at', { ascending: false }),
   ]);
 
   if (roomRes.error) throw roomRes.error;
@@ -224,6 +225,7 @@ export async function fetchGameData(roomId) {
     players: playersRes.data || [],
     catalog: catalogRes.data || [],
     gameProperties: gamePropsRes.data || [],
+    propertySales: salesRes?.data || [],
   };
 }
 
@@ -240,9 +242,9 @@ export async function leaveRoom(roomId) {
 }
 
 /**
- * Subscribe to realtime table changes for players, room state, and game properties.
+ * Subscribe to realtime table changes for players, room state, game properties, and sales.
  */
-export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropertiesChange) {
+export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropertiesChange, onSalesChange) {
   const channel = supabase.channel(`room:${roomId}`)
     .on(
       'postgres_changes',
@@ -277,7 +279,19 @@ export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropert
         filter: `room_id=eq.${roomId}`,
       },
       (payload) => {
-        if (onPropertiesChange) onPropertiesChange(payload);
+        onPropertiesChange(payload);
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'property_sales',
+        filter: `room_id=eq.${roomId}`,
+      },
+      (payload) => {
+        onSalesChange && onSalesChange(payload);
       }
     )
     .subscribe();

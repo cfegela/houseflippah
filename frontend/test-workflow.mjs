@@ -470,6 +470,124 @@ async function runTest() {
   }
   console.log('   ✓ Bought-back property carries a fresh $90,000 mortgage balance.');
 
+  // 7c. Testing Automated Buyer Pool & Sales Settlement
+  console.log('7c. Testing Automated Buyer Pool & Property Sales...');
+
+  // Advance from Round 8 to Round 9 (so Oriental Ave can be listed)
+  await advanceFullRound(); // -> Round 9 starts
+
+  // Attempt to list Oriental Ave below remaining mortgage balance ($90,000)
+  const { error: underMortgageErr } = await p1.client.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: 'oriental-ave',
+    p_list_price: 50000
+  });
+  if (!underMortgageErr || !underMortgageErr.message.includes('remaining mortgage balance')) {
+    throw new Error(`Expected restriction for listing below mortgage balance! Got: ${underMortgageErr?.message}`);
+  }
+  console.log(`   ✓ Under-mortgage listing restriction enforced: "${underMortgageErr.message}"`);
+
+  // List Oriental Ave for $120,000 (equal to its $120,000 upgraded market value)
+  const { data: listOrientalData, error: listOrientalErr } = await p1.client.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: 'oriental-ave',
+    p_list_price: 120000
+  });
+  if (listOrientalErr) throw listOrientalErr;
+  console.log('   ✓ Listed Oriental Ave for $120,000 (at market value).');
+
+  // Record seller's cash before sale
+  const { data: p1Before } = await p1.client.from('room_players').select('*').eq('room_id', roomId).eq('user_id', p1.user.id).single();
+  const cashBeforeSale = p1Before.cash;
+
+  // Advance rounds until Oriental Ave sells to the automated buyer pool
+  let soldItem = null;
+  for (let r = 0; r < 25; r++) {
+    // If sold, break
+    const { data: gpCheck } = await p1.client.from('game_properties').select('*').eq('room_id', roomId).eq('property_slug', 'oriental-ave').single();
+    if (gpCheck.is_sold_to_buyer) {
+      soldItem = gpCheck;
+      break;
+    }
+    // Pay mortgage on Oriental Ave while listed so it doesn't foreclose
+    const { data: currRoom } = await p1.client.from('rooms').select('*').eq('id', roomId).single();
+    const { data: gpOriental } = await p1.client.from('game_properties').select('*').eq('room_id', roomId).eq('property_slug', 'oriental-ave').single();
+    if (gpOriental.owner_user_id === p1.user.id && gpOriental.last_paid_round < currRoom.current_round) {
+      try {
+        await p1.client.rpc('make_mortgage_payment', { p_room_id: roomId, p_property_slug: 'oriental-ave' });
+      } catch (e) {}
+    }
+    const advanceRes = await advanceFullRound();
+    if (advanceRes.sold_properties && advanceRes.sold_properties.length > 0) {
+      const match = advanceRes.sold_properties.find((s) => s.property_slug === 'oriental-ave');
+      if (match) {
+        soldItem = match;
+        break;
+      }
+    }
+  }
+
+  if (!soldItem) {
+    throw new Error('Expected Oriental Ave to sell within automated buyer pool rolls!');
+  }
+  console.log(`   ✓ Oriental Ave sold to automated buyer "${soldItem.buyer_name || 'Buyer'}"!`);
+
+  // Verify property state in game_properties
+  const { data: orientalSoldCheck } = await p1.client.from('game_properties').select('*').eq('room_id', roomId).eq('property_slug', 'oriental-ave').single();
+  if (!orientalSoldCheck.is_sold_to_buyer) {
+    throw new Error('Expected is_sold_to_buyer to be true');
+  }
+  if (orientalSoldCheck.owner_user_id !== null) {
+    throw new Error('Expected owner_user_id to be null after sale to automated buyer');
+  }
+  if (orientalSoldCheck.is_listed !== false) {
+    throw new Error('Expected is_listed to be false after sale');
+  }
+  if (orientalSoldCheck.mortgage_balance !== 0) {
+    throw new Error(`Expected mortgage balance to be 0 after sale, got ${orientalSoldCheck.mortgage_balance}`);
+  }
+  console.log('   ✓ Option B enforced: Property is permanently marked is_sold_to_buyer=true and mortgage cleared.');
+
+  // Verify seller cash was credited
+  const { data: p1After } = await p1.client.from('room_players').select('*').eq('room_id', roomId).eq('user_id', p1.user.id).single();
+  console.log(`   ✓ Cash before sale: $${cashBeforeSale}, Cash after sale: $${p1After.cash}.`);
+
+  // Verify record in property_sales
+  const { data: salesRecords, error: salesErr } = await p1.client
+    .from('property_sales')
+    .select('*')
+    .eq('room_id', roomId)
+    .eq('property_slug', 'oriental-ave')
+    .eq('buyer_type', 'automated');
+  if (salesErr) throw salesErr;
+  if (!salesRecords || salesRecords.length === 0) {
+    throw new Error('Expected property_sales record for automated buyer sale!');
+  }
+  const saleRec = salesRecords[0];
+  if (saleRec.sale_price !== 120000) throw new Error(`Expected sale_price $120,000, got ${saleRec.sale_price}`);
+  console.log(`   ✓ property_sales ledger entry verified: Buyer "${saleRec.buyer_name}", Sale $${saleRec.sale_price}, Net +$${saleRec.net_proceeds}.`);
+
+  // Verify attempting to buy sold property is blocked
+  const { error: reBuySoldErr } = await p1.client.rpc('buy_property', {
+    p_room_id: roomId,
+    p_property_slug: 'oriental-ave'
+  });
+  if (!reBuySoldErr || !reBuySoldErr.message.includes('sold to an outside buyer')) {
+    throw new Error('Expected error when attempting to buy property sold to outside buyer!');
+  }
+  console.log(`   ✓ Re-purchasing sold property blocked: "${reBuySoldErr.message}"`);
+
+  // Verify attempting to list sold property is blocked
+  const { error: reListSoldErr } = await p1.client.rpc('list_property', {
+    p_room_id: roomId,
+    p_property_slug: 'oriental-ave',
+    p_list_price: 130000
+  });
+  if (!reListSoldErr || !reListSoldErr.message.includes('sold to an outside buyer')) {
+    throw new Error('Expected error when attempting to list property sold to outside buyer!');
+  }
+  console.log(`   ✓ Listing sold property blocked: "${reListSoldErr.message}"`);
+
   // 9. Host ends the game for all players
   console.log('8. Host ends the game (leave_room as host)...');
   const { data: hostLeaveData, error: hostLeaveErr } = await p1.client.rpc('leave_room', {

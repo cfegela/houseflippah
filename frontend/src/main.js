@@ -23,6 +23,8 @@ let currentRoom = null;
 let currentPlayers = [];
 let catalogProperties = [];
 let gameProperties = [];
+let propertySales = [];
+let lastAcknowledgedSalesRound = 0;
 let currentGameSubpage = 'dashboard';
 let selectedPropertySlug = null;
 let unsubscribeRealtime = null;
@@ -386,6 +388,13 @@ const btnCloseImproveModal = document.getElementById('btn-close-improve-modal');
 
 let pendingImproveProperty = null;
 
+// DOM Elements - Market Sales Modal (Turn Start Alert)
+const marketSalesModal = document.getElementById('market-sales-modal');
+const modalSalesTitle = document.getElementById('modal-sales-title');
+const modalSalesSubtitle = document.getElementById('modal-sales-subtitle');
+const modalSalesContent = document.getElementById('modal-sales-content');
+const btnCloseSalesModal = document.getElementById('btn-close-sales-modal');
+
 // Helpers
 function formatMoney(amount) {
   return '$' + Number(amount || 0).toLocaleString('en-US');
@@ -658,6 +667,7 @@ async function loadAndShowGameView() {
     currentPlayers = data.players;
     catalogProperties = data.catalog;
     gameProperties = data.gameProperties;
+    propertySales = data.propertySales || [];
 
     document.getElementById('app').classList.add('in-lobby');
     landingView.classList.add('hidden');
@@ -730,6 +740,9 @@ function renderGameHUD() {
   } else {
     btnGameEnd.classList.add('hidden');
   }
+
+  // Turn-start sales alert check
+  checkTurnStartSalesModal();
 }
 
 // Render Zillow-Style Properties Feed
@@ -738,6 +751,8 @@ function renderProperties() {
 
   const availableProperties = catalogProperties.filter((prop) => {
     const gp = gameProperties.find((g) => g.property_slug === prop.slug);
+    // Sold to outside buyer: permanently off the market
+    if (gp && gp.is_sold_to_buyer) return false;
     // Bank-owned properties are available for purchase
     if (!gp || !gp.owner_user_id) return true;
     // Resale properties listed by any player (including your own listings)
@@ -1084,10 +1099,11 @@ if (btnConfirmPurchase) {
       playCashRegisterSound();
       closePurchaseModal();
 
-      const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+      const { room, players, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(currentRoom.id);
       currentRoom = room;
       currentPlayers = players;
       gameProperties = updatedProps;
+      propertySales = updatedSales || [];
 
       renderGameHUD();
       renderProperties();
@@ -1251,10 +1267,11 @@ function renderSellProperties() {
         delistBtn.textContent = 'Delisting...';
         try {
           await delistProperty(currentRoom.id, prop.slug);
-          const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+          const { room, players, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(currentRoom.id);
           currentRoom = room;
           currentPlayers = players;
           gameProperties = updatedProps;
+          propertySales = updatedSales || [];
           renderGameHUD();
           renderProperties();
           renderSellProperties();
@@ -1328,10 +1345,11 @@ if (btnConfirmListProperty) {
       await listProperty(currentRoom.id, pendingListProperty.slug, askingPrice);
       closeListModal();
 
-      const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+      const { room, players, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(currentRoom.id);
       currentRoom = room;
       currentPlayers = players;
       gameProperties = updatedProps;
+      propertySales = updatedSales || [];
 
       renderGameHUD();
       renderProperties();
@@ -1577,10 +1595,11 @@ function renderImproveModalContent() {
         try {
           await makeImprovement(currentRoom.id, prop.slug, imp.key);
           playCashRegisterSound();
-          const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+          const { room, players, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(currentRoom.id);
           currentRoom = room;
           currentPlayers = players;
           gameProperties = updatedProps;
+          propertySales = updatedSales || [];
 
           renderGameHUD();
           renderProperties();
@@ -1604,6 +1623,22 @@ if (btnCloseImproveModal) {
 if (improvePropertyModal) {
   improvePropertyModal.addEventListener('click', (e) => {
     if (e.target === improvePropertyModal) closeImproveModal();
+  });
+}
+
+if (btnCloseSalesModal) {
+  btnCloseSalesModal.addEventListener('click', () => {
+    if (marketSalesModal) marketSalesModal.classList.add('hidden');
+    lastAcknowledgedSalesRound = currentRoom?.current_round || 0;
+  });
+}
+
+if (marketSalesModal) {
+  marketSalesModal.addEventListener('click', (e) => {
+    if (e.target === marketSalesModal) {
+      marketSalesModal.classList.add('hidden');
+      lastAcknowledgedSalesRound = currentRoom?.current_round || 0;
+    }
   });
 }
 
@@ -1743,10 +1778,11 @@ function renderMortgagePayments() {
         try {
           await makeMortgagePayment(currentRoom.id, catalog.slug, isDouble);
           playCashRegisterSound();
-          const { room, players, gameProperties: updatedProps } = await fetchGameData(currentRoom.id);
+          const { room, players, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(currentRoom.id);
           currentRoom = room;
           currentPlayers = players;
           gameProperties = updatedProps;
+          propertySales = updatedSales || [];
           renderGameHUD();
           renderMortgagePayments();
           renderProperties();
@@ -1875,13 +1911,26 @@ function renderMarketReport() {
     </div>
   `;
 
-  // 2. Sales History Section: Show all properties purchased, price, and round
-  const purchasedProperties = gameProperties
-    .filter((gp) => gp.purchased_round != null)
-    .sort((a, b) => (b.purchased_round || 0) - (a.purchased_round || 0));
+  // 2. Sales History Section: Show all sales sorted by most recent round
+  const salesToDisplay = (propertySales && propertySales.length > 0)
+    ? [...propertySales].sort((a, b) => (b.round_number || 0) - (a.round_number || 0) || new Date(b.created_at || 0) - new Date(a.created_at || 0))
+    : gameProperties
+        .filter((gp) => gp.purchased_round != null)
+        .map((gp) => {
+          const prop = catalogProperties.find((cp) => cp.slug === gp.property_slug);
+          const buyer = currentPlayers.find((p) => p.user_id === gp.owner_user_id);
+          return {
+            property_slug: gp.property_slug,
+            buyer_name: buyer ? buyer.display_name : 'Player',
+            sale_price: gp.purchase_price || prop?.cost || 0,
+            round_number: gp.purchased_round,
+            buyer_type: 'player'
+          };
+        })
+        .sort((a, b) => (b.round_number || 0) - (a.round_number || 0));
 
   let salesHistoryHtml = '';
-  if (purchasedProperties.length === 0) {
+  if (salesToDisplay.length === 0) {
     salesHistoryHtml = `
       <div class="sales-history-section">
         <h3 class="sales-history-title">Sales History (0)</h3>
@@ -1894,13 +1943,14 @@ function renderMarketReport() {
       </div>
     `;
   } else {
-    const itemsHtml = purchasedProperties.map((gp) => {
-      const prop = catalogProperties.find((cp) => cp.slug === gp.property_slug);
+    const itemsHtml = salesToDisplay.map((s) => {
+      const prop = catalogProperties.find((cp) => cp.slug === s.property_slug);
       if (!prop) return '';
 
-      const buyer = currentPlayers.find((p) => p.user_id === gp.owner_user_id);
-      const buyerName = buyer ? buyer.display_name : 'Player';
-      const price = gp.purchase_price || prop.cost;
+      const isAutomated = s.buyer_type === 'automated';
+      const metaText = isAutomated
+        ? `Seller: ${escapeHtml(s.seller_name || 'Player')} • Buyer: ${escapeHtml(s.buyer_name)}`
+        : `Buyer: ${escapeHtml(s.buyer_name)}`;
 
       return `
         <div class="sales-history-item">
@@ -1909,12 +1959,12 @@ function renderMarketReport() {
             <div class="sales-history-prop-group">
               <span class="sales-history-prop-name">${escapeHtml(prop.name)}</span>
               <div class="sales-history-meta">
-                <span>Buyer: ${escapeHtml(buyerName)}</span>
+                <span>${metaText}</span>
               </div>
             </div>
             <div class="sales-history-price-group">
-              <span class="sales-history-price">${formatMoney(price)}</span>
-              <span class="sales-history-badge">Round ${gp.purchased_round}</span>
+              <span class="sales-history-price">${formatMoney(s.sale_price)}</span>
+              <span class="sales-history-badge">Round ${s.round_number}</span>
             </div>
           </div>
         </div>
@@ -1923,7 +1973,7 @@ function renderMarketReport() {
 
     salesHistoryHtml = `
       <div class="sales-history-section">
-        <h3 class="sales-history-title">Sales History (${purchasedProperties.length})</h3>
+        <h3 class="sales-history-title">Sales History (${salesToDisplay.length})</h3>
         <div class="sales-history-list">
           ${itemsHtml}
         </div>
@@ -1932,6 +1982,129 @@ function renderMarketReport() {
   }
 
   marketReportContainer.innerHTML = tempCardHtml + salesHistoryHtml;
+}
+
+// Turn-Start Notification: Market Sales Modal Alert
+function checkTurnStartSalesModal() {
+  if (!marketSalesModal || !currentRoom || currentRoom.status !== 'in_progress') return;
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  if (!myPlayer) return;
+
+  const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
+  if (!isMyTurn) return;
+
+  // Only check once per round per player
+  if (lastAcknowledgedSalesRound >= currentRoom.current_round) return;
+
+  // Look for automated sales that occurred during the transition to this round (round_number === currentRoom.current_round - 1)
+  const previousRound = currentRoom.current_round - 1;
+  const recentSales = (propertySales || []).filter(
+    (s) => s.buyer_type === 'automated' && s.round_number === previousRound
+  );
+
+  if (recentSales.length === 0) {
+    lastAcknowledgedSalesRound = currentRoom.current_round;
+    return;
+  }
+
+  // Populate modal
+  modalSalesTitle.textContent = `Round ${previousRound} Sales Report`;
+  modalSalesSubtitle.textContent = `Automated buyers completed purchases at the close of Round ${previousRound}.`;
+
+  const mySales = recentSales.filter((s) => s.seller_user_id === currentUser?.id);
+  const otherSales = recentSales.filter((s) => s.seller_user_id !== currentUser?.id);
+
+  let html = '';
+
+  if (mySales.length > 0) {
+    html += `
+      <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.5rem;">
+        <div style="font-size: 1.05rem; font-weight: 800; color: #22c55e; margin-bottom: 0.25rem;">
+          🎉 You Sold ${mySales.length} ${mySales.length === 1 ? 'Property' : 'Properties'}!
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">
+          Mortgages were paid off from the proceeds and net cash was deposited into your bank account.
+        </div>
+      </div>
+    `;
+
+    mySales.forEach((s) => {
+      const prop = catalogProperties.find((cp) => cp.slug === s.property_slug);
+      const propName = prop ? prop.name : s.property_slug;
+      const color = prop ? prop.color_hex : '#38bdf8';
+
+      html += `
+        <div class="sale-alert-item sale-alert-mine">
+          <div class="sale-alert-header">
+            <span class="sale-alert-prop-name">
+              <span class="sale-alert-dot" style="background-color: ${color};"></span>
+              ${escapeHtml(propName)}
+            </span>
+            <span class="sale-alert-price">${formatMoney(s.sale_price)}</span>
+          </div>
+          <div class="sale-alert-details">
+            <div class="sale-alert-breakdown">
+              <span>Buyer:</span>
+              <strong style="color: var(--text-main);">${escapeHtml(s.buyer_name)}</strong>
+            </div>
+            <div class="sale-alert-breakdown">
+              <span>Mortgage Paid Off:</span>
+              <strong style="color: #ef4444;">-${formatMoney(s.mortgage_paid)}</strong>
+            </div>
+            <div class="sale-alert-breakdown" style="border-top: 1px dashed rgba(51, 65, 85, 0.4); padding-top: 0.3rem; margin-top: 0.2rem;">
+              <span>Net Cash Deposited:</span>
+              <strong class="sale-alert-net">+${formatMoney(s.net_proceeds)}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (otherSales.length > 0) {
+    if (mySales.length > 0) {
+      html += `
+        <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-top: 0.5rem;">
+          Other Sales in the Market
+        </div>
+      `;
+    }
+
+    otherSales.forEach((s) => {
+      const prop = catalogProperties.find((cp) => cp.slug === s.property_slug);
+      const propName = prop ? prop.name : s.property_slug;
+      const color = prop ? prop.color_hex : '#38bdf8';
+
+      html += `
+        <div class="sale-alert-item">
+          <div class="sale-alert-header">
+            <span class="sale-alert-prop-name">
+              <span class="sale-alert-dot" style="background-color: ${color};"></span>
+              ${escapeHtml(propName)}
+            </span>
+            <span class="sale-alert-price">${formatMoney(s.sale_price)}</span>
+          </div>
+          <div class="sale-alert-details">
+            <div class="sale-alert-breakdown">
+              <span>Seller:</span>
+              <strong style="color: var(--text-main);">${escapeHtml(s.seller_name || 'Player')}</strong>
+            </div>
+            <div class="sale-alert-breakdown">
+              <span>Buyer:</span>
+              <strong style="color: var(--text-main);">${escapeHtml(s.buyer_name)}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  modalSalesContent.innerHTML = html;
+  marketSalesModal.classList.remove('hidden');
+
+  if (mySales.length > 0) {
+    playCashRegisterSound();
+  }
 }
 
 // Realtime subscriptions
@@ -1980,9 +2153,10 @@ function setupRealtimeSubscription(roomId) {
     async () => {
       // Game property ownership changes
       try {
-        const { gameProperties: updatedProps, players: updatedPlayers } = await fetchGameData(roomId);
+        const { gameProperties: updatedProps, players: updatedPlayers, propertySales: updatedSales } = await fetchGameData(roomId);
         gameProperties = updatedProps;
         currentPlayers = updatedPlayers;
+        propertySales = updatedSales || [];
         renderGameHUD();
         renderProperties();
         if (currentGameSubpage === 'make-payments') renderMortgagePayments();
@@ -1996,6 +2170,21 @@ function setupRealtimeSubscription(roomId) {
         if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
       } catch (err) {
         console.error('Error refreshing properties:', err);
+      }
+    },
+    async () => {
+      // Property sales updates
+      try {
+        const { propertySales: updatedSales, players: updatedPlayers, gameProperties: updatedProps } = await fetchGameData(roomId);
+        propertySales = updatedSales || [];
+        currentPlayers = updatedPlayers;
+        gameProperties = updatedProps;
+        renderGameHUD();
+        renderProperties();
+        if (currentGameSubpage === 'market-report') renderMarketReport();
+        if (currentGameSubpage === 'financial-report') renderFinancialReport();
+      } catch (err) {
+        console.error('Error refreshing sales:', err);
       }
     }
   );
