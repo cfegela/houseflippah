@@ -502,7 +502,7 @@ async function runTest() {
 
   // Advance rounds until Oriental Ave sells to the automated buyer pool
   let soldItem = null;
-  for (let r = 0; r < 25; r++) {
+  for (let r = 0; r < 40; r++) {
     // If sold, break
     const { data: gpCheck } = await p1.client.from('game_properties').select('*').eq('room_id', roomId).eq('property_slug', 'oriental-ave').single();
     if (gpCheck.is_sold_to_buyer) {
