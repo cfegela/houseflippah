@@ -567,6 +567,18 @@ async function runTest() {
   if (saleRec.sale_price !== 120000) throw new Error(`Expected sale_price $120,000, got ${saleRec.sale_price}`);
   console.log(`   ✓ property_sales ledger entry verified: Buyer "${saleRec.buyer_name}", Sale $${saleRec.sale_price}, Net +$${saleRec.net_proceeds}.`);
 
+  // Verify turn-start sales modal detection matches previous round
+  const { data: postSaleRoom } = await p1.client.from('rooms').select('*').eq('id', roomId).single();
+  const previousRound = postSaleRoom.current_round - 1;
+  if (saleRec.round_number !== previousRound) {
+    throw new Error(`Expected sale round_number ${saleRec.round_number} to match previous round ${previousRound}`);
+  }
+  const turnStartSales = salesRecords.filter((s) => s.buyer_type === 'automated' && s.round_number === previousRound);
+  if (turnStartSales.length === 0) {
+    throw new Error('Expected turn-start sales filter to capture automated sale!');
+  }
+  console.log(`   ✓ Turn-start sales alert filter verified: 1 sale detected for Round ${previousRound} transition.`);
+
   // Verify attempting to buy sold property is blocked
   const { error: reBuySoldErr } = await p1.client.rpc('buy_property', {
     p_room_id: roomId,

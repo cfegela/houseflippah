@@ -1997,15 +1997,19 @@ function checkTurnStartSalesModal() {
   if (lastAcknowledgedSalesRound >= currentRoom.current_round) return;
 
   // Look for automated sales that occurred during the transition to this round (round_number === currentRoom.current_round - 1)
-  const previousRound = currentRoom.current_round - 1;
+  const previousRound = (currentRoom.current_round || 1) - 1;
   const recentSales = (propertySales || []).filter(
     (s) => s.buyer_type === 'automated' && s.round_number === previousRound
   );
 
   if (recentSales.length === 0) {
-    lastAcknowledgedSalesRound = currentRoom.current_round;
+    // Do not mark lastAcknowledgedSalesRound here so if sales arrive via realtime
+    // immediately after a turn transition, the modal can still be triggered.
     return;
   }
+
+  // Mark as acknowledged immediately so subsequent re-renders during this turn do not re-trigger
+  lastAcknowledgedSalesRound = currentRoom.current_round;
 
   // Populate modal
   modalSalesTitle.textContent = `Round ${previousRound} Sales Report`;
@@ -2115,12 +2119,15 @@ function setupRealtimeSubscription(roomId) {
     roomId,
     async () => {
       try {
-        const { room: latestRoom, players: updatedPlayers } = await fetchRoom(roomId);
+        const { room: latestRoom, players: updatedPlayers, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(roomId);
         if (latestRoom.status === 'abandoned') {
           showLandingView();
           return;
         }
+        currentRoom = latestRoom;
         currentPlayers = updatedPlayers;
+        gameProperties = updatedProps;
+        propertySales = updatedSales || [];
         if (currentRoom.status === 'in_progress') {
           renderGameHUD();
           renderProperties();
@@ -2346,10 +2353,19 @@ btnEndTurn.addEventListener('click', async () => {
   unlockAudio();
   btnEndTurn.disabled = true;
   try {
-    const { room } = await endTurn(currentRoom.id);
+    await endTurn(currentRoom.id);
+    const { room, players, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(currentRoom.id);
     currentRoom = room;
+    currentPlayers = players;
+    gameProperties = updatedProps;
+    propertySales = updatedSales || [];
+
     renderGameHUD();
     renderProperties();
+    if (currentGameSubpage === 'sell-properties') renderSellProperties();
+    if (currentGameSubpage === 'make-payments') renderMortgagePayments();
+    if (currentGameSubpage === 'financial-report') renderFinancialReport();
+    if (currentGameSubpage === 'market-report') renderMarketReport();
   } catch (err) {
     showAlert(err.message || 'Failed to end turn.');
     btnEndTurn.disabled = false;
@@ -2373,8 +2389,15 @@ endGameModal.addEventListener('click', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (marketSalesModal && !marketSalesModal.classList.contains('hidden')) {
+      marketSalesModal.classList.add('hidden');
+      lastAcknowledgedSalesRound = currentRoom?.current_round || 0;
+    }
     if (!endGameModal.classList.contains('hidden')) closeEndGameModal();
     if (!qrModal.classList.contains('hidden')) closeQrModal();
+    if (listPropertyModal && !listPropertyModal.classList.contains('hidden')) closeListModal();
+    if (purchaseConfirmModal && !purchaseConfirmModal.classList.contains('hidden')) closePurchaseModal();
+    if (improvePropertyModal && !improvePropertyModal.classList.contains('hidden')) closeImproveModal();
   }
 });
 
