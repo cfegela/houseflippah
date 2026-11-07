@@ -551,6 +551,7 @@ input[type="number"] {
   color: var(--text-muted);
   font-weight: 700;
   letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .turn-indicator-box {
@@ -579,6 +580,27 @@ input[type="number"] {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.hud-wallet-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  background: #1e293b;
+  border: 1px solid var(--border-color);
+  text-align: left;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.hud-wallet-amount {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #22c55e;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .wallet-box {
@@ -623,6 +645,12 @@ input[type="number"] {
     padding: 0.5rem 1rem;
   }
   .turn-player-name {
+    font-size: 1.1rem;
+  }
+  .hud-wallet-box {
+    padding: 0.5rem 1rem;
+  }
+  .hud-wallet-amount {
     font-size: 1.1rem;
   }
   #btn-end-turn {
