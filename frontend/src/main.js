@@ -1563,8 +1563,7 @@ function renderImproveModalContent() {
     itemDiv.innerHTML = `
       <div class="improvement-info">
         <div class="improvement-title">
-          <span>${imp.icon}</span>
-          <span>${escapeHtml(imp.name)}</span>
+          ${escapeHtml(imp.name)}
         </div>
         <div class="improvement-meta">
           <span>Cost: <span class="improvement-cost-val">${formatMoney(impCost)}</span></span>
