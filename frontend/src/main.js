@@ -335,6 +335,10 @@ const IMPROVEMENTS_CATALOG = [
   { key: 'flooring_painting', name: 'Flooring & Painting', icon: '🎨', desc: 'Hardwood refinishing, luxury vinyl tile, and interior/exterior paint.' },
   { key: 'kitchen_baths', name: 'Kitchen & Baths', icon: '🍳', desc: 'Quartz countertops, custom cabinetry, tile showers, and fixtures.' }
 ];
+
+// Market Temperature Base Odds & Flipstimate
+export { MARKET_TEMPERATURE_ODDS, calculateFlipstimate } from './odds.js';
+import { calculateFlipstimate } from './odds.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -1153,6 +1157,7 @@ function renderSellProperties() {
     const isListed = !!gp.is_listed;
     const installedImprovements = Array.isArray(gp.improvements) ? gp.improvements : [];
     const isUnimproved = installedImprovements.length === 0;
+    const flipstimate = calculateFlipstimate(gp, currentRoom);
 
     let actionBtnHtml = '';
     if (isListed) {
@@ -1225,6 +1230,10 @@ function renderSellProperties() {
             <span class="property-detail-stat-val" style="${isListed ? 'color: #38bdf8; font-weight: 800;' : 'color: var(--text-muted);'}">
               ${isListed ? formatMoney(gp.list_price) : 'Not Listed'}
             </span>
+          </div>
+          <div class="property-detail-stat">
+            <span class="property-detail-stat-label">Flipstimate</span>
+            <span class="property-detail-stat-val">${flipstimate}</span>
           </div>
           <div class="property-detail-stat">
             <span class="property-detail-stat-label">Market Value</span>

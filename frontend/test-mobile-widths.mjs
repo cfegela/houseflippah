@@ -179,9 +179,55 @@ async function run() {
         `
       },
       {
-        name: 'Make Payments View (Single + Double Pay side-by-side)',
+        name: 'Sell Property View (5-tile grid with Flipstimate)',
         setupJs: `
           document.getElementById('game-property-details-view').classList.add('hidden');
+          document.getElementById('game-sell-properties-view').classList.remove('hidden');
+          document.getElementById('sell-properties-container').innerHTML = \`
+            <div class="property-detail-card">
+              <div class="property-detail-stripe" style="background-color: #8B5A2B;"></div>
+              <div class="property-detail-body">
+                <div class="property-detail-header-row">
+                  <div class="property-detail-title-group"><h3 style="margin: 0;">Mediterranean Avenue</h3></div>
+                </div>
+                <div class="property-detail-grid">
+                  <div class="property-detail-stat">
+                    <span class="property-detail-stat-label">Asking Price</span>
+                    <span class="property-detail-stat-val" style="color: #38bdf8; font-weight: 800;">$120,000</span>
+                  </div>
+                  <div class="property-detail-stat">
+                    <span class="property-detail-stat-label">Flipstimate</span>
+                    <span class="property-detail-stat-val">30%</span>
+                  </div>
+                  <div class="property-detail-stat">
+                    <span class="property-detail-stat-label">Market Value</span>
+                    <span class="property-detail-stat-val" style="color: #22c55e;">$120,000</span>
+                  </div>
+                  <div class="property-detail-stat">
+                    <span class="property-detail-stat-label">Purchase Price</span>
+                    <span class="property-detail-stat-val">$60,000</span>
+                  </div>
+                  <div class="property-detail-stat">
+                    <span class="property-detail-stat-label">Mortgage / Round</span>
+                    <span class="property-detail-stat-val" style="color: #38bdf8;">$1,500</span>
+                  </div>
+                </div>
+              </div>
+              <div class="property-detail-actions" style="justify-content: flex-end;">
+                <div>
+                  <button class="btn-detail-buy btn-delist-property" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171;">
+                    Delist Property
+                  </button>
+                </div>
+              </div>
+            </div>
+          \`;
+        `
+      },
+      {
+        name: 'Make Payments View (Single + Double Pay side-by-side)',
+        setupJs: `
+          document.getElementById('game-sell-properties-view').classList.add('hidden');
           document.getElementById('game-make-payments-view').classList.remove('hidden');
           document.getElementById('mortgage-payments-container').innerHTML = \`
             <div class="mortgage-card is-delinquent">
