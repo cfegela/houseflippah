@@ -814,7 +814,6 @@ function renderProperties() {
       </div>
       <div class="card-body">
         <div class="prop-price">${formatMoney(effectivePrice)}</div>
-        <div class="prop-specs">${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft</div>
         <div style="font-size: 0.8rem; color: #38bdf8; font-weight: 600; margin-top: 0.15rem;">
           10% Down: ${formatMoney((effectivePrice * 10) / 100)} • ${formatMoney(effectivePrice / 40)}/rd
         </div>
@@ -978,12 +977,6 @@ function renderPropertyDetails(slug) {
         <div class="property-detail-stat">
           <span class="property-detail-stat-label">Mortgage / Round</span>
           <span class="property-detail-stat-val" style="color: #38bdf8;">${formatMoney(roundMortgage)}</span>
-        </div>
-        <div class="property-detail-stat">
-          <span class="property-detail-stat-label">Layout & Size</span>
-          <span class="property-detail-stat-val" style="font-size: 1.1rem; padding-top: 0.2rem;">
-            ${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft
-          </span>
         </div>
       </div>
     </div>
@@ -1245,12 +1238,6 @@ function renderSellProperties() {
             <span class="property-detail-stat-label">Mortgage / Round</span>
             <span class="property-detail-stat-val" style="color: #38bdf8;">${formatMoney(roundMortgage)}</span>
           </div>
-          <div class="property-detail-stat">
-            <span class="property-detail-stat-label">Layout & Size</span>
-            <span class="property-detail-stat-val" style="font-size: 1.1rem; padding-top: 0.2rem;">
-              ${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft
-            </span>
-          </div>
         </div>
       </div>
 
@@ -1487,12 +1474,6 @@ function renderMakeImprovements() {
           <div class="property-detail-stat">
             <span class="property-detail-stat-label">Mortgage / Round</span>
             <span class="property-detail-stat-val" style="color: #38bdf8;">${formatMoney(roundMortgage)}</span>
-          </div>
-          <div class="property-detail-stat">
-            <span class="property-detail-stat-label">Layout & Size</span>
-            <span class="property-detail-stat-val" style="font-size: 1.1rem; padding-top: 0.2rem;">
-              ${prop.beds} bds • ${prop.baths} ba • ${prop.sqft.toLocaleString()} sqft
-            </span>
           </div>
         </div>
       </div>
