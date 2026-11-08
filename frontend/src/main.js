@@ -1547,13 +1547,13 @@ function renderImproveModalContent() {
     } else if (!canAfford) {
       actionBtnHtml = `
         <button class="btn-install-improvement" disabled title="Insufficient cash (${formatMoney(playerCash)} available)">
-          Install (${formatMoney(impCost)})
+          Install
         </button>
       `;
     } else {
       actionBtnHtml = `
         <button class="btn-install-improvement btn-modal-install" data-slug="${prop.slug}" data-key="${imp.key}">
-          Install (${formatMoney(impCost)})
+          Install
         </button>
       `;
     }
