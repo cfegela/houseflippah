@@ -1942,6 +1942,115 @@ input[type="number"] {
 .market-temperature-val.temp-toasty { color: #f97316; }
 .market-temperature-val.temp-on-fire { color: #ef4444; }
 
+/* Market Report - Leaderboard Card */
+.market-leaderboard-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+@media (min-width: 640px) {
+  .market-leaderboard-card {
+    padding: 1.5rem;
+  }
+}
+
+.market-leaderboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.market-leaderboard-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.market-leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.market-leaderboard-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.85rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  gap: 0.75rem;
+}
+
+.leaderboard-player-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.leaderboard-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 1.65rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.leaderboard-rank.rank-1 {
+  background: rgba(234, 179, 8, 0.15);
+  color: #facc15;
+  border-color: rgba(234, 179, 8, 0.4);
+}
+
+.leaderboard-rank.rank-2 {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.leaderboard-rank.rank-3 {
+  background: rgba(249, 115, 22, 0.15);
+  color: #fb923c;
+  border-color: rgba(249, 115, 22, 0.35);
+}
+
+.leaderboard-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-equity {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #22c55e;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .sales-history-section {
   display: flex;
   flex-direction: column;

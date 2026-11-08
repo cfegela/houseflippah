@@ -339,6 +339,8 @@ const IMPROVEMENTS_CATALOG = [
 // Market Temperature Base Odds & Flipstimate
 export { MARKET_TEMPERATURE_ODDS, calculateFlipstimate } from './odds.js';
 import { calculateFlipstimate } from './odds.js';
+export { calculatePlayerEquity, getLeaderboardData } from './leaderboard.js';
+import { getLeaderboardData } from './leaderboard.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -1908,7 +1910,36 @@ function renderMarketReport() {
     </div>
   `;
 
-  // 2. Sales History Section: Show all sales sorted by most recent round
+  // 2. Leaderboard Card (Ranked by Total Equity descending)
+  const rankedPlayers = getLeaderboardData(currentPlayers, gameProperties, catalogProperties);
+  let leaderboardCardHtml = '';
+  if (rankedPlayers.length > 0) {
+    const playerRowsHtml = rankedPlayers.map((p) => {
+      const rankClass = p.rank <= 3 ? `rank-${p.rank}` : '';
+      return `
+        <div class="market-leaderboard-item">
+          <div class="leaderboard-player-left">
+            <span class="leaderboard-rank ${rankClass}">#${p.rank}</span>
+            <span class="leaderboard-name">${escapeHtml(p.displayName)}</span>
+          </div>
+          <span class="leaderboard-equity">${formatMoney(p.equity)}</span>
+        </div>
+      `;
+    }).join('');
+
+    leaderboardCardHtml = `
+      <div class="market-leaderboard-card">
+        <div class="market-leaderboard-header">
+          <h3 class="market-leaderboard-title">Leaderboard</h3>
+        </div>
+        <div class="market-leaderboard-list">
+          ${playerRowsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  // 3. Sales History Section: Show all sales sorted by most recent round
   const salesToDisplay = (propertySales && propertySales.length > 0)
     ? [...propertySales].sort((a, b) => (b.round_number || 0) - (a.round_number || 0) || new Date(b.created_at || 0) - new Date(a.created_at || 0))
     : gameProperties
@@ -1978,7 +2009,7 @@ function renderMarketReport() {
     `;
   }
 
-  marketReportContainer.innerHTML = tempCardHtml + salesHistoryHtml;
+  marketReportContainer.innerHTML = tempCardHtml + leaderboardCardHtml + salesHistoryHtml;
 }
 
 // Turn-Start Notification: Market Sales Modal Alert

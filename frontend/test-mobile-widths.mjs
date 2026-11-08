@@ -290,6 +290,27 @@ async function run() {
               <div class="market-temperature-label">Market Temperature</div>
               <div class="market-temperature-val temp-toasty">Toasty</div>
             </div>
+            <div class="market-leaderboard-card">
+              <div class="market-leaderboard-header">
+                <h3 class="market-leaderboard-title">Leaderboard</h3>
+              </div>
+              <div class="market-leaderboard-list">
+                <div class="market-leaderboard-item">
+                  <div class="leaderboard-player-left">
+                    <span class="leaderboard-rank rank-1">#1</span>
+                    <span class="leaderboard-name">Alice Extra Long Name</span>
+                  </div>
+                  <span class="leaderboard-equity">$1,234,567</span>
+                </div>
+                <div class="market-leaderboard-item">
+                  <div class="leaderboard-player-left">
+                    <span class="leaderboard-rank rank-2">#2</span>
+                    <span class="leaderboard-name">Bob</span>
+                  </div>
+                  <span class="leaderboard-equity">$100,000</span>
+                </div>
+              </div>
+            </div>
             <div class="sales-history-section">
               <h3 class="sales-history-title">Sales History (0)</h3>
               <div class="card placeholder-card" style="padding: 3rem 1.5rem;">
@@ -309,6 +330,41 @@ async function run() {
             <div class="market-temperature-card">
               <div class="market-temperature-label">Market Temperature</div>
               <div class="market-temperature-val temp-on-fire">On Fire</div>
+            </div>
+            <div class="market-leaderboard-card">
+              <div class="market-leaderboard-header">
+                <h3 class="market-leaderboard-title">Leaderboard</h3>
+              </div>
+              <div class="market-leaderboard-list">
+                <div class="market-leaderboard-item">
+                  <div class="leaderboard-player-left">
+                    <span class="leaderboard-rank rank-1">#1</span>
+                    <span class="leaderboard-name">Charlie</span>
+                  </div>
+                  <span class="leaderboard-equity">$1,200,000</span>
+                </div>
+                <div class="market-leaderboard-item">
+                  <div class="leaderboard-player-left">
+                    <span class="leaderboard-rank rank-2">#2</span>
+                    <span class="leaderboard-name">Alice Extra Long Name</span>
+                  </div>
+                  <span class="leaderboard-equity">$1,060,000</span>
+                </div>
+                <div class="market-leaderboard-item">
+                  <div class="leaderboard-player-left">
+                    <span class="leaderboard-rank rank-3">#3</span>
+                    <span class="leaderboard-name">Bob</span>
+                  </div>
+                  <span class="leaderboard-equity">$100,000</span>
+                </div>
+                <div class="market-leaderboard-item">
+                  <div class="leaderboard-player-left">
+                    <span class="leaderboard-rank">#4</span>
+                    <span class="leaderboard-name">Dave</span>
+                  </div>
+                  <span class="leaderboard-equity">$90,000</span>
+                </div>
+              </div>
             </div>
             <div class="sales-history-section">
               <h3 class="sales-history-title">Sales History (2)</h3>
