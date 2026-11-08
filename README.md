@@ -81,8 +81,13 @@ At the conclusion of each round, an automated pool of outside buyers evaluates a
   * ☀️ **Toasty**: 40% base sale odds
   * 🔥 **On Fire**: 50% base sale odds
 
+* **Improvement Odds Boost**:
+  * Each installed improvement increases the property's base selling odds by **+5%**.
+  * For example, in an "On Fire" market (50% base odds), a property with 1 improvement has a 55% chance of selling at market value, while a property with all 5 improvements has a 75% chance of selling at market value.
+  * Unimproved properties cannot be listed and have a 0% chance of selling.
+
 * **Pricing vs. Market Value**:
-  * Listing **at market value** sells at the round's exact base odds.
+  * Listing **at market value** sells at the effective base odds (market temperature base odds + improvement bonus).
   * Listing **below market value** **increases** the odds of selling proportional to the discount (e.g. pricing 20% below market value boosts sale odds by 20%, up to a maximum of 100%).
   * Listing **above market value** **decreases** the odds of selling proportional to the markup (e.g. pricing 20% above market value reduces sale odds by 20%).
 

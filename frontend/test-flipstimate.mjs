@@ -11,73 +11,101 @@ assert.equal(calculateFlipstimate({}, { market_temperature: 'Comfy' }), '0%');
 assert.equal(calculateFlipstimate(null, { market_temperature: 'Ice Cold' }), '0%');
 console.log('   ✓ Unimproved properties return 0% across all market temperatures.');
 
-// 2. Improved unlisted properties return base odds for round
-console.log('2. Testing improved unlisted properties return round base odds...');
-const improvedUnlisted = { improvements: ['windows_doors'], is_listed: false, purchase_price: 100000, market_value: 120000 };
-assert.equal(calculateFlipstimate(improvedUnlisted, { market_temperature: 'Ice Cold' }), '10%');
-assert.equal(calculateFlipstimate(improvedUnlisted, { market_temperature: 'Chilly' }), '20%');
-assert.equal(calculateFlipstimate(improvedUnlisted, { market_temperature: 'Comfy' }), '30%');
-assert.equal(calculateFlipstimate(improvedUnlisted, { market_temperature: 'Toasty' }), '40%');
-assert.equal(calculateFlipstimate(improvedUnlisted, { market_temperature: 'On Fire' }), '50%');
-assert.equal(calculateFlipstimate(improvedUnlisted, null), '30%'); // Default Comfy
-console.log('   ✓ Unlisted improved properties match round base odds perfectly (10%, 20%, 30%, 40%, 50%).');
+// 2. 1 improvement adds +5% to base odds
+console.log('2. Testing single improvement (+5% boost)...');
+const singleImprovement = {
+  improvements: ['windows_doors'],
+  is_listed: false,
+  purchase_price: 100000,
+  market_value: 120000
+};
+// Ice Cold: 10% + 5% = 15%
+assert.equal(calculateFlipstimate(singleImprovement, { market_temperature: 'Ice Cold' }), '15%');
+// Chilly: 20% + 5% = 25%
+assert.equal(calculateFlipstimate(singleImprovement, { market_temperature: 'Chilly' }), '25%');
+// Comfy: 30% + 5% = 35%
+assert.equal(calculateFlipstimate(singleImprovement, { market_temperature: 'Comfy' }), '35%');
+// Toasty: 40% + 5% = 45%
+assert.equal(calculateFlipstimate(singleImprovement, { market_temperature: 'Toasty' }), '45%');
+// On Fire: 50% + 5% = 55%
+assert.equal(calculateFlipstimate(singleImprovement, { market_temperature: 'On Fire' }), '55%');
+console.log('   ✓ Single improvement boosts base odds by +5% (e.g. 50% -> 55% in On Fire).');
 
-// 3. Improved properties listed at exact market value
-console.log('3. Testing properties listed at exact market value...');
-const listedAtMarket = {
+// 3. 5 improvements add +25% to base odds
+console.log('3. Testing 5 improvements (+25% boost)...');
+const fiveImprovements = {
+  improvements: ['windows_doors', 'hvac_mechanicals', 'roof_siding', 'flooring_painting', 'kitchen_baths'],
+  is_listed: false,
+  purchase_price: 100000,
+  market_value: 200000
+};
+// Ice Cold: 10% + 25% = 35%
+assert.equal(calculateFlipstimate(fiveImprovements, { market_temperature: 'Ice Cold' }), '35%');
+// Chilly: 20% + 25% = 45%
+assert.equal(calculateFlipstimate(fiveImprovements, { market_temperature: 'Chilly' }), '45%');
+// Comfy: 30% + 25% = 55%
+assert.equal(calculateFlipstimate(fiveImprovements, { market_temperature: 'Comfy' }), '55%');
+// Toasty: 40% + 25% = 65%
+assert.equal(calculateFlipstimate(fiveImprovements, { market_temperature: 'Toasty' }), '65%');
+// On Fire: 50% + 25% = 75%
+assert.equal(calculateFlipstimate(fiveImprovements, { market_temperature: 'On Fire' }), '75%');
+console.log('   ✓ 5 improvements boost base odds by +25% (e.g. 50% -> 75% in On Fire).');
+
+// 4. Properties listed at exact market value
+console.log('4. Testing properties listed at exact market value...');
+const listedAtMarketSingle = {
   improvements: ['windows_doors'],
   is_listed: true,
   purchase_price: 100000,
   market_value: 120000,
   list_price: 120000
 };
-assert.equal(calculateFlipstimate(listedAtMarket, { market_temperature: 'Ice Cold' }), '10%');
-assert.equal(calculateFlipstimate(listedAtMarket, { market_temperature: 'Chilly' }), '20%');
-assert.equal(calculateFlipstimate(listedAtMarket, { market_temperature: 'Comfy' }), '30%');
-assert.equal(calculateFlipstimate(listedAtMarket, { market_temperature: 'Toasty' }), '40%');
-assert.equal(calculateFlipstimate(listedAtMarket, { market_temperature: 'On Fire' }), '50%');
-console.log('   ✓ Listed at market value equals base odds exactly.');
+assert.equal(calculateFlipstimate(listedAtMarketSingle, { market_temperature: 'On Fire' }), '55%');
 
-// 4. Properties listed below market value (boosts odds)
-console.log('4. Testing properties listed below market value...');
-// 20% below market value ($80k on $100k market value) -> factor = 1.20
-const belowMarket = {
+const listedAtMarketFive = {
+  improvements: ['windows_doors', 'hvac_mechanicals', 'roof_siding', 'flooring_painting', 'kitchen_baths'],
+  is_listed: true,
+  purchase_price: 100000,
+  market_value: 200000,
+  list_price: 200000
+};
+assert.equal(calculateFlipstimate(listedAtMarketFive, { market_temperature: 'On Fire' }), '75%');
+console.log('   ✓ Listed at market value equals effective base odds exactly (55% single, 75% five in On Fire).');
+
+// 5. Properties listed below market value (scales with effective base odds)
+console.log('5. Testing properties listed below market value...');
+// Single improvement in On Fire (55% base odds), discounted 20% ($80k on $100k market value) -> factor = 1.20
+// 55% * 1.20 = 66%
+const belowMarketSingle = {
   improvements: ['windows_doors'],
   is_listed: true,
   purchase_price: 100000,
   market_value: 100000,
   list_price: 80000
 };
-// Comfy: 30% * 1.20 = 36%
-assert.equal(calculateFlipstimate(belowMarket, { market_temperature: 'Comfy' }), '36%');
-// On Fire: 50% * 1.20 = 60%
-assert.equal(calculateFlipstimate(belowMarket, { market_temperature: 'On Fire' }), '60%');
-// Ice Cold: 10% * 1.20 = 12%
-assert.equal(calculateFlipstimate(belowMarket, { market_temperature: 'Ice Cold' }), '12%');
-console.log('   ✓ Pricing below market value increases odds proportionately.');
+assert.equal(calculateFlipstimate(belowMarketSingle, { market_temperature: 'On Fire' }), '66%');
+assert.equal(calculateFlipstimate(belowMarketSingle, { market_temperature: 'Comfy' }), '42%'); // 35% * 1.20 = 42%
+console.log('   ✓ Pricing below market value boosts effective base odds proportionately.');
 
-// 5. Properties listed above market value (reduces odds)
-console.log('5. Testing properties listed above market value...');
-// 20% above market value ($120k on $100k market value) -> factor = 0.80
-const aboveMarket = {
+// 6. Properties listed above market value (scales with effective base odds)
+console.log('6. Testing properties listed above market value...');
+// Single improvement in On Fire (55% base odds), marked up 20% ($120k on $100k market value) -> factor = 0.80
+// 55% * 0.80 = 44%
+const aboveMarketSingle = {
   improvements: ['windows_doors'],
   is_listed: true,
   purchase_price: 100000,
   market_value: 100000,
   list_price: 120000
 };
-// Comfy: 30% * 0.80 = 24%
-assert.equal(calculateFlipstimate(aboveMarket, { market_temperature: 'Comfy' }), '24%');
-// On Fire: 50% * 0.80 = 40%
-assert.equal(calculateFlipstimate(aboveMarket, { market_temperature: 'On Fire' }), '40%');
-// Ice Cold: 10% * 0.80 = 8%
-assert.equal(calculateFlipstimate(aboveMarket, { market_temperature: 'Ice Cold' }), '8%');
-console.log('   ✓ Pricing above market value decreases odds proportionately.');
+assert.equal(calculateFlipstimate(aboveMarketSingle, { market_temperature: 'On Fire' }), '44%');
+assert.equal(calculateFlipstimate(aboveMarketSingle, { market_temperature: 'Comfy' }), '28%'); // 35% * 0.80 = 28%
+console.log('   ✓ Pricing above market value decreases effective base odds proportionately.');
 
-// 6. Extreme clamping (never < 0% and never > 100%)
-console.log('6. Testing extreme clamping...');
+// 7. Extreme clamping (never < 0% and never > 100%)
+console.log('7. Testing extreme clamping...');
 const wayAboveMarket = {
-  improvements: ['windows_doors'],
+  improvements: ['windows_doors', 'hvac_mechanicals', 'roof_siding', 'flooring_painting', 'kitchen_baths'],
   is_listed: true,
   purchase_price: 100000,
   market_value: 100000,
@@ -86,11 +114,11 @@ const wayAboveMarket = {
 assert.equal(calculateFlipstimate(wayAboveMarket, { market_temperature: 'On Fire' }), '0%');
 
 const massiveDiscount = {
-  improvements: ['windows_doors'],
+  improvements: ['windows_doors', 'hvac_mechanicals', 'roof_siding', 'flooring_painting', 'kitchen_baths'],
   is_listed: true,
   purchase_price: 100000,
   market_value: 100000,
-  list_price: 1 // essentially free -> factor 2.0
+  list_price: 10000 // 90% discount -> factor 1.90 -> 75% * 1.90 = 142.5% -> clamped to 100%
 };
 assert.equal(calculateFlipstimate(massiveDiscount, { market_temperature: 'On Fire' }), '100%');
 console.log('   ✓ Clamping strictly bounds odds between 0% and 100%.');

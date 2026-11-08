@@ -16,18 +16,20 @@ export function calculateFlipstimate(gp, room) {
 
   const temp = room?.market_temperature || 'Comfy';
   const baseOdds = MARKET_TEMPERATURE_ODDS[temp] ?? 0.30;
+  const improvementBonus = installedImprovements.length * 0.05;
+  const effectiveBaseOdds = baseOdds + improvementBonus;
 
   if (!gp?.is_listed || gp.list_price == null) {
-    return `${Math.round(baseOdds * 100)}%`;
+    return `${Math.round(Math.min(1.0, effectiveBaseOdds) * 100)}%`;
   }
 
   const purchasePrice = gp.purchase_price || 0;
   const marketValue = gp.market_value || purchasePrice;
   if (marketValue <= 0) {
-    return `${Math.round(baseOdds * 100)}%`;
+    return `${Math.round(Math.min(1.0, effectiveBaseOdds) * 100)}%`;
   }
 
-  let effectiveOdds = baseOdds * (1.0 - (gp.list_price - marketValue) / marketValue);
+  let effectiveOdds = effectiveBaseOdds * (1.0 - (gp.list_price - marketValue) / marketValue);
   effectiveOdds = Math.max(0, Math.min(1.0, effectiveOdds));
   return `${Math.round(effectiveOdds * 100)}%`;
 }
