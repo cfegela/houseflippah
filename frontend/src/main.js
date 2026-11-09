@@ -2261,8 +2261,6 @@ function checkTurnStartForeclosureModal() {
 function showForeclosureModal(foreclosures) {
   if (!foreclosureAlertModal || !modalForeclosureContent) return;
 
-  playForeclosureSound();
-
   const count = foreclosures.length;
   modalForeclosureTitle.textContent = count === 1 ? 'Property Foreclosed!' : 'Properties Foreclosed!';
   modalForeclosureSubtitle.textContent = `The bank has seized ${count === 1 ? 'a property' : `${count} properties`} due to unpaid mortgage delinquency.`;
@@ -2345,8 +2343,6 @@ function checkTurnStartDelinquencyModal() {
 
 function showDelinquencyModal(delinquentProps) {
   if (!delinquencyAlertModal || !modalDelinquencyContent) return;
-
-  playWarningSound();
 
   const count = delinquentProps.length;
   modalDelinquencyTitle.textContent = 'Mortgage Delinquency Warning';
@@ -2526,10 +2522,6 @@ function checkTurnStartSalesModal() {
 
   modalSalesContent.innerHTML = html;
   marketSalesModal.classList.remove('hidden');
-
-  if (mySales.length > 0) {
-    playCashRegisterSound();
-  }
 }
 
 // Realtime subscriptions
