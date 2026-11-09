@@ -413,8 +413,11 @@ const modalListPropertyBaseCost = document.getElementById('modal-list-property-b
 const modalListPriceInput = document.getElementById('modal-list-price-input');
 const btnCancelListProperty = document.getElementById('btn-cancel-list-property');
 const btnConfirmListProperty = document.getElementById('btn-confirm-list-property');
+const modalListAlertBox = document.getElementById('modal-list-alert-box');
+const modalListAlertMsg = document.getElementById('modal-list-alert-msg');
 
 let pendingListProperty = null;
+let pendingListGameProperty = null;
 
 // DOM Elements - Improve Property Modal
 const improvePropertyModal = document.getElementById('improve-property-modal');
@@ -1339,10 +1342,29 @@ function renderSellProperties() {
   });
 }
 
+// List Property Modal Alert Helpers
+function showListModalAlert(message) {
+  if (!modalListAlertBox || !modalListAlertMsg) return;
+  modalListAlertMsg.textContent = message;
+  modalListAlertBox.classList.remove('hidden');
+}
+
+function hideListModalAlert() {
+  if (modalListAlertBox) {
+    modalListAlertBox.classList.add('hidden');
+  }
+}
+
+if (modalListPriceInput) {
+  modalListPriceInput.addEventListener('input', hideListModalAlert);
+}
+
 // List Property Modal Logic
 function openListModal(prop, gp) {
   if (!prop || !currentRoom) return;
   pendingListProperty = prop;
+  pendingListGameProperty = gp;
+  hideListModalAlert();
 
   const marketVal = gp?.market_value || prop.cost;
   if (modalListPropertyName) modalListPropertyName.textContent = prop.name;
@@ -1367,7 +1389,9 @@ function openListModal(prop, gp) {
 
 function closeListModal() {
   if (listPropertyModal) listPropertyModal.classList.add('hidden');
+  hideListModalAlert();
   pendingListProperty = null;
+  pendingListGameProperty = null;
 }
 
 if (btnCancelListProperty) {
@@ -1385,7 +1409,14 @@ if (btnConfirmListProperty) {
     if (!pendingListProperty || !currentRoom) return;
     const askingPrice = parseInt(modalListPriceInput.value, 10);
     if (!askingPrice || askingPrice <= 0 || askingPrice > 10000000) {
-      showAlert('Please enter a valid asking price between $1 and $10,000,000.');
+      showListModalAlert('Please enter a valid asking price between $1 and $10,000,000.');
+      modalListPriceInput.focus();
+      return;
+    }
+
+    const mortgageBal = pendingListGameProperty?.mortgage_balance || 0;
+    if (askingPrice < mortgageBal) {
+      showListModalAlert(`List price must be at least the remaining mortgage balance (${formatMoney(mortgageBal)}).`);
       modalListPriceInput.focus();
       return;
     }
@@ -1407,9 +1438,9 @@ if (btnConfirmListProperty) {
       renderProperties();
       renderSellProperties();
     } catch (err) {
-      showAlert(err.message || 'Failed to list property.');
+      showListModalAlert(err.message || 'Failed to list property.');
       btnConfirmListProperty.disabled = false;
-      btnConfirmListProperty.textContent = 'List for Sale';
+      btnConfirmListProperty.textContent = pendingListGameProperty?.is_listed ? 'Update Asking Price' : 'List for Sale';
     }
   });
 }

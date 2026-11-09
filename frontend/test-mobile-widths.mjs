@@ -142,9 +142,18 @@ async function run() {
         `
       },
       {
-        name: 'End Game Confirmation Modal (50/50 Button Row)',
+        name: 'List Property Modal (with Mortgage Alert Banner)',
         setupJs: `
           document.getElementById('purchase-confirm-modal').classList.add('hidden');
+          document.getElementById('list-property-modal').classList.remove('hidden');
+          document.getElementById('modal-list-alert-box').classList.remove('hidden');
+          document.getElementById('modal-list-alert-msg').textContent = 'List price must be at least the remaining mortgage balance ($54,000).';
+        `
+      },
+      {
+        name: 'End Game Confirmation Modal (50/50 Button Row)',
+        setupJs: `
+          document.getElementById('list-property-modal').classList.add('hidden');
           document.getElementById('end-game-modal').classList.remove('hidden');
         `
       },
