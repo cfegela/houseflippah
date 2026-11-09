@@ -242,6 +242,18 @@ export async function leaveRoom(roomId) {
 }
 
 /**
+ * Resign from an active game room.
+ */
+export async function resignGame(roomId) {
+  const { data, error } = await supabase.rpc('resign_game', {
+    p_room_id: roomId,
+  });
+
+  if (error) throw error;
+  return data;
+}
+
+/**
  * Subscribe to realtime table changes for players, room state, game properties, and sales.
  */
 export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropertiesChange, onSalesChange) {

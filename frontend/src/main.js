@@ -6,6 +6,7 @@ import {
   joinRoom,
   fetchRoom,
   leaveRoom,
+  resignGame,
   subscribeToRoom,
   startGame,
   buyProperty,
@@ -341,6 +342,7 @@ const roundNumberDisplay = document.getElementById('round-number-display');
 const turnPlayerDisplay = document.getElementById('turn-player-display');
 const myWalletDisplay = document.getElementById('my-wallet-display');
 const btnEndTurn = document.getElementById('btn-end-turn');
+const btnResignGame = document.getElementById('btn-resign-game');
 const btnGameEnd = document.getElementById('btn-game-end');
 const propertiesGrid = document.getElementById('properties-grid');
 
@@ -393,6 +395,18 @@ const cardNavFinancialReport = document.getElementById('card-nav-financial-repor
 const endGameModal = document.getElementById('end-game-modal');
 const btnCancelEndGame = document.getElementById('btn-cancel-end-game');
 const btnConfirmEndGame = document.getElementById('btn-confirm-end-game');
+
+// DOM Elements - Resign Game Modal
+const resignGameModal = document.getElementById('resign-game-modal');
+const btnCancelResignGame = document.getElementById('btn-cancel-resign-game');
+const btnConfirmResignGame = document.getElementById('btn-confirm-resign-game');
+
+// DOM Elements - Game Over / Winner Modal
+const gameOverModal = document.getElementById('game-over-modal');
+const modalGameOverTitle = document.getElementById('modal-game-over-title');
+const modalGameOverDesc = document.getElementById('modal-game-over-desc');
+const modalGameOverStats = document.getElementById('modal-game-over-stats');
+const btnGameOverHome = document.getElementById('btn-game-over-home');
 
 // DOM Elements - Purchase Confirmation Modal
 const purchaseConfirmModal = document.getElementById('purchase-confirm-modal');
@@ -607,6 +621,11 @@ function showLandingView() {
   setRoomUrl(null);
   closeQrModal();
   closeEndGameModal();
+  closeResignModal();
+  closeGameOverModal();
+
+  if (btnResignGame) btnResignGame.classList.add('hidden');
+  if (btnGameEnd) btnGameEnd.classList.add('hidden');
 
   document.getElementById('app').classList.remove('in-lobby');
   lobbyView.classList.add('hidden');
@@ -787,6 +806,15 @@ function renderGameHUD() {
   // Wallet (if present)
   if (myPlayer && myWalletDisplay) {
     myWalletDisplay.textContent = formatMoney(myPlayer.cash);
+  }
+
+  // Resign Game control (available to all players during active game)
+  if (btnResignGame) {
+    if (currentRoom?.status === 'in_progress') {
+      btnResignGame.classList.remove('hidden');
+    } else {
+      btnResignGame.classList.add('hidden');
+    }
   }
 
   // Host Controls
@@ -2323,6 +2351,14 @@ function setupRealtimeSubscription(roomId) {
           showLandingView();
           return;
         }
+        if (latestRoom.status === 'completed') {
+          currentRoom = latestRoom;
+          currentPlayers = updatedPlayers;
+          gameProperties = updatedProps;
+          propertySales = updatedSales || [];
+          showGameOverModal();
+          return;
+        }
         currentRoom = latestRoom;
         currentPlayers = updatedPlayers;
         gameProperties = updatedProps;
@@ -2353,6 +2389,8 @@ function setupRealtimeSubscription(roomId) {
           await loadAndShowGameView();
         } else if (currentRoom.status === 'abandoned') {
           showLandingView();
+        } else if (currentRoom.status === 'completed') {
+          showGameOverModal();
         }
       }
     },
@@ -2579,8 +2617,76 @@ function closeEndGameModal() {
   endGameModal.classList.add('hidden');
 }
 
+function openResignModal() {
+  if (resignGameModal) resignGameModal.classList.remove('hidden');
+}
+
+function closeResignModal() {
+  if (resignGameModal) resignGameModal.classList.add('hidden');
+}
+
+function showGameOverModal() {
+  if (!gameOverModal) return;
+  const winner = currentPlayers[0];
+  const isWinner = winner?.user_id === currentUser?.id;
+
+  if (modalGameOverTitle) {
+    modalGameOverTitle.textContent = isWinner ? '🏆 Victory!' : 'Game Over';
+  }
+  if (modalGameOverDesc) {
+    modalGameOverDesc.textContent = isWinner
+      ? 'All opponents have resigned. You are the last flipper standing!'
+      : `${winner?.display_name || 'Opponent'} is the last flipper standing!`;
+  }
+
+  if (modalGameOverStats && winner) {
+    const equity = calculatePlayerEquity(winner, gameProperties, catalogProperties);
+    const ownedProps = gameProperties.filter((gp) => gp.owner_user_id === winner.user_id && !gp.is_sold_to_buyer);
+    modalGameOverStats.innerHTML = `
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+        <span style="color: var(--text-muted); font-size: 0.9rem;">Winner:</span>
+        <span style="font-weight: 700; color: #f59e0b;">${escapeHtml(winner.display_name)} (Seat ${winner.seat_number})</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+        <span style="color: var(--text-muted); font-size: 0.9rem;">Final Cash:</span>
+        <span style="font-weight: 700; color: #38bdf8;">${formatMoney(winner.cash)}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+        <span style="color: var(--text-muted); font-size: 0.9rem;">Properties Owned:</span>
+        <span style="font-weight: 700;">${ownedProps.length}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 0.5rem;">
+        <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">Total Equity:</span>
+        <span style="font-weight: 800; color: #22c55e; font-size: 1.1rem;">${formatMoney(equity)}</span>
+      </div>
+    `;
+  }
+
+  gameOverModal.classList.remove('hidden');
+}
+
+function closeGameOverModal() {
+  if (gameOverModal) gameOverModal.classList.add('hidden');
+}
+
 btnGameEnd.addEventListener('click', openEndGameModal);
 btnCancelEndGame.addEventListener('click', closeEndGameModal);
+
+if (btnResignGame) btnResignGame.addEventListener('click', openResignModal);
+if (btnCancelResignGame) btnCancelResignGame.addEventListener('click', closeResignModal);
+
+if (resignGameModal) {
+  resignGameModal.addEventListener('click', (e) => {
+    if (e.target === resignGameModal) closeResignModal();
+  });
+}
+
+if (btnGameOverHome) {
+  btnGameOverHome.addEventListener('click', () => {
+    closeGameOverModal();
+    showLandingView();
+  });
+}
 
 endGameModal.addEventListener('click', (e) => {
   if (e.target === endGameModal) closeEndGameModal();
@@ -2596,12 +2702,35 @@ window.addEventListener('keydown', (e) => {
       lastAcknowledgedSalesRound = currentRoom?.current_round || 0;
     }
     if (!endGameModal.classList.contains('hidden')) closeEndGameModal();
+    if (resignGameModal && !resignGameModal.classList.contains('hidden')) closeResignModal();
+    if (gameOverModal && !gameOverModal.classList.contains('hidden')) {
+      closeGameOverModal();
+      showLandingView();
+    }
     if (!qrModal.classList.contains('hidden')) closeQrModal();
     if (listPropertyModal && !listPropertyModal.classList.contains('hidden')) closeListModal();
     if (purchaseConfirmModal && !purchaseConfirmModal.classList.contains('hidden')) closePurchaseModal();
     if (improvePropertyModal && !improvePropertyModal.classList.contains('hidden')) closeImproveModal();
   }
 });
+
+if (btnConfirmResignGame) {
+  btnConfirmResignGame.addEventListener('click', async () => {
+    if (!currentRoom) return;
+    const wasRoomId = currentRoom.id;
+    btnConfirmResignGame.disabled = true;
+    closeResignModal();
+    try {
+      await resignGame(wasRoomId);
+    } catch (err) {
+      console.error('Error resigning game:', err);
+      showAlert(err.message || 'Failed to resign game.');
+    } finally {
+      btnConfirmResignGame.disabled = false;
+    }
+    showLandingView();
+  });
+}
 
 btnConfirmEndGame.addEventListener('click', async () => {
   if (!currentRoom) return;

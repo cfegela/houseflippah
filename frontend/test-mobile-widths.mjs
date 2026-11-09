@@ -444,6 +444,50 @@ async function run() {
             </div>
           \`;
         `
+      },
+      {
+        name: 'Resign Game Confirmation Modal (50/50 Button Row)',
+        setupJs: `
+          hideAllModals();
+          document.getElementById('resign-game-modal').classList.remove('hidden');
+        `
+      },
+      {
+        name: 'Game Over / Winner Modal',
+        setupJs: `
+          hideAllModals();
+          const modal = document.getElementById('game-over-modal');
+          document.getElementById('modal-game-over-stats').innerHTML = \`
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: var(--text-muted); font-size: 0.9rem;">Winner:</span>
+              <span style="font-weight: 700; color: #f59e0b;">Alice (Seat 1)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: var(--text-muted); font-size: 0.9rem;">Final Cash:</span>
+              <span style="font-weight: 700; color: #38bdf8;">$124,500</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+              <span style="color: var(--text-muted); font-size: 0.9rem;">Properties Owned:</span>
+              <span style="font-weight: 700;">3</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 0.5rem;">
+              <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">Total Equity:</span>
+              <span style="font-weight: 800; color: #22c55e; font-size: 1.1rem;">$240,000</span>
+            </div>
+          \`;
+          modal.classList.remove('hidden');
+        `
+      },
+      {
+        name: 'Game Bottom Bar (Resign Game + End Game Buttons)',
+        setupJs: `
+          hideAllModals();
+          document.getElementById('landing-view').classList.add('hidden');
+          document.getElementById('lobby-view').classList.add('hidden');
+          document.getElementById('game-view').classList.remove('hidden');
+          document.getElementById('btn-resign-game').classList.remove('hidden');
+          document.getElementById('btn-game-end').classList.remove('hidden');
+        `
       }
     ];
 

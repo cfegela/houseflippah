@@ -238,6 +238,15 @@ input[type="number"] {
   color: #fff;
 }
 
+.btn-warning {
+  background-color: #d97706;
+  color: #fff;
+}
+
+.btn-warning:hover:not(:disabled) {
+  background-color: #b45309;
+}
+
 .btn-secondary {
   background-color: #334155;
   color: var(--text-main);

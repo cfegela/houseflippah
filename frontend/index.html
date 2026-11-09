@@ -125,6 +125,41 @@
         </div>
       </div>
 
+      <!-- Resign Game Confirmation Modal -->
+      <div id="resign-game-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="text-align: center;">
+          <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: #f59e0b;">Resign Game?</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
+            Are you sure you want to resign? You will forfeit your properties back to the bank and exit the match.
+          </p>
+          <div class="actions-row modal-actions-row">
+            <button id="btn-cancel-resign-game" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button id="btn-confirm-resign-game" class="btn btn-warning">
+              Resign
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over / Winner Modal -->
+      <div id="game-over-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="text-align: center; max-width: 440px;">
+          <div style="font-size: 3rem; margin-bottom: 0.5rem; line-height: 1;">🏆</div>
+          <h3 id="modal-game-over-title" style="font-size: 1.4rem; font-weight: 800; margin-bottom: 0.5rem; color: #f59e0b;">Victory!</h3>
+          <p id="modal-game-over-desc" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.25rem;">
+            All opponents have resigned. You are the last flipper standing!
+          </p>
+          <div id="modal-game-over-stats" style="margin-bottom: 1.5rem; text-align: left; background: rgba(15, 23, 42, 0.6); padding: 1rem; border-radius: 0.75rem; border: 1px solid var(--border-color);">
+            <!-- Populated dynamically with winner stats -->
+          </div>
+          <button id="btn-game-over-home" class="btn btn-primary" style="width: 100%; padding: 0.85rem; font-size: 1rem; font-weight: 700;">
+            Return to Home
+          </button>
+        </div>
+      </div>
+
       <!-- Purchase Confirmation Modal -->
       <div id="purchase-confirm-modal" class="modal-overlay hidden">
         <div class="modal-card" style="max-width: 480px; text-align: left;">
@@ -530,6 +565,9 @@
 
         <!-- Bottom Game Actions -->
         <div class="game-bottom-bar">
+          <button id="btn-resign-game" class="btn btn-warning hidden">
+            Resign Game
+          </button>
           <button id="btn-game-end" class="btn btn-danger hidden">
             End Game
           </button>
