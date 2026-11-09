@@ -32,6 +32,7 @@ let lastAcknowledgedForeclosureRound = 0;
 let currentGameSubpage = 'dashboard';
 let selectedPropertySlug = null;
 let unsubscribeRealtime = null;
+let currentSubscribedRoomId = null;
 let lastKnownTurnKey = null;
 let lastKnownRound = null;
 
@@ -651,6 +652,7 @@ function showLandingView() {
     unsubscribeRealtime();
     unsubscribeRealtime = null;
   }
+  currentSubscribedRoomId = null;
   currentRoom = null;
   currentPlayers = [];
   lastKnownTurnKey = null;
@@ -787,6 +789,7 @@ async function loadAndShowGameView() {
     catalogProperties = data.catalog;
     gameProperties = data.gameProperties;
     propertySales = data.propertySales || [];
+    propertyForeclosures = data.propertyForeclosures || [];
 
     document.getElementById('app').classList.add('in-lobby');
     landingView.classList.add('hidden');
@@ -2318,8 +2321,10 @@ function closeForeclosureModal() {
   if (foreclosureAlertModal) {
     foreclosureAlertModal.classList.add('hidden');
   }
-  // Next in sequence: check Delinquency
-  checkTurnStartDelinquencyModal();
+  // Next in sequence: check Delinquency, or if none, check Sales
+  if (!checkTurnStartDelinquencyModal()) {
+    checkTurnStartSalesModal();
+  }
 }
 
 function checkTurnStartDelinquencyModal() {
@@ -2419,106 +2424,71 @@ function checkTurnStartSalesModal() {
     (s) => s.buyer_type === 'automated' && s.round_number === previousRound
   );
 
+  // If no sales have arrived yet in local state, allow re-checking on subsequent realtime updates
   if (recentSales.length === 0) {
-    // Do not mark lastAcknowledgedSalesRound here so if sales arrive via realtime
-    // immediately after a turn transition, the modal can still be triggered.
+    return;
+  }
+
+  // Filter ONLY sales belonging to the current player (personal turn-start alert)
+  const mySales = recentSales.filter((s) => s.seller_user_id === currentUser?.id);
+
+  // If this player had no sales in the round transition, acknowledge this round and do not display modal
+  if (mySales.length === 0) {
+    lastAcknowledgedSalesRound = currentRoom.current_round;
     return;
   }
 
   // Mark as acknowledged immediately so subsequent re-renders during this turn do not re-trigger
   lastAcknowledgedSalesRound = currentRoom.current_round;
 
-  // Populate modal
-  modalSalesTitle.textContent = `Round ${previousRound} Sales Report`;
-  modalSalesSubtitle.textContent = `Automated buyers completed purchases at the close of Round ${previousRound}.`;
+  const count = mySales.length;
+  modalSalesTitle.textContent = count === 1 ? '🎉 Property Sold!' : `🎉 ${count} Properties Sold!`;
+  modalSalesSubtitle.textContent = count === 1
+    ? `An automated buyer purchased your property at the close of Round ${previousRound}.`
+    : `Automated buyers purchased ${count} of your properties at the close of Round ${previousRound}.`;
 
-  const mySales = recentSales.filter((s) => s.seller_user_id === currentUser?.id);
-  const otherSales = recentSales.filter((s) => s.seller_user_id !== currentUser?.id);
+  let html = `
+    <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.5rem;">
+      <div style="font-size: 1.05rem; font-weight: 800; color: #22c55e; margin-bottom: 0.25rem;">
+        ${count === 1 ? 'Proceeds Credited to Your Account' : 'All Proceeds Credited to Your Account'}
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        Outstanding mortgages were paid off in full and net proceeds have been deposited into your bank balance.
+      </div>
+    </div>
+  `;
 
-  let html = '';
+  mySales.forEach((s) => {
+    const prop = catalogProperties.find((cp) => cp.slug === s.property_slug);
+    const propName = prop ? prop.name : s.property_slug;
+    const color = prop ? prop.color_hex : '#22c55e';
 
-  if (mySales.length > 0) {
     html += `
-      <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.5rem;">
-        <div style="font-size: 1.05rem; font-weight: 800; color: #22c55e; margin-bottom: 0.25rem;">
-          🎉 You Sold ${mySales.length} ${mySales.length === 1 ? 'Property' : 'Properties'}!
+      <div class="sale-alert-item sale-alert-mine">
+        <div class="sale-alert-header">
+          <span class="sale-alert-prop-name">
+            <span class="sale-alert-dot" style="background-color: ${color};"></span>
+            ${escapeHtml(propName)}
+          </span>
+          <span class="sale-alert-price">${formatMoney(s.sale_price)}</span>
         </div>
-        <div style="font-size: 0.85rem; color: var(--text-muted);">
-          Mortgages were paid off from the proceeds and net cash was deposited into your bank account.
+        <div class="sale-alert-details">
+          <div class="sale-alert-breakdown">
+            <span>Buyer:</span>
+            <strong style="color: var(--text-main);">${escapeHtml(s.buyer_name)}</strong>
+          </div>
+          <div class="sale-alert-breakdown">
+            <span>Mortgage Paid Off:</span>
+            <strong style="color: #ef4444;">-${formatMoney(s.mortgage_paid)}</strong>
+          </div>
+          <div class="sale-alert-breakdown" style="border-top: 1px dashed rgba(51, 65, 85, 0.4); padding-top: 0.3rem; margin-top: 0.2rem;">
+            <span>Net Cash Deposited:</span>
+            <strong class="sale-alert-net">+${formatMoney(s.net_proceeds)}</strong>
+          </div>
         </div>
       </div>
     `;
-
-    mySales.forEach((s) => {
-      const prop = catalogProperties.find((cp) => cp.slug === s.property_slug);
-      const propName = prop ? prop.name : s.property_slug;
-      const color = prop ? prop.color_hex : '#38bdf8';
-
-      html += `
-        <div class="sale-alert-item sale-alert-mine">
-          <div class="sale-alert-header">
-            <span class="sale-alert-prop-name">
-              <span class="sale-alert-dot" style="background-color: ${color};"></span>
-              ${escapeHtml(propName)}
-            </span>
-            <span class="sale-alert-price">${formatMoney(s.sale_price)}</span>
-          </div>
-          <div class="sale-alert-details">
-            <div class="sale-alert-breakdown">
-              <span>Buyer:</span>
-              <strong style="color: var(--text-main);">${escapeHtml(s.buyer_name)}</strong>
-            </div>
-            <div class="sale-alert-breakdown">
-              <span>Mortgage Paid Off:</span>
-              <strong style="color: #ef4444;">-${formatMoney(s.mortgage_paid)}</strong>
-            </div>
-            <div class="sale-alert-breakdown" style="border-top: 1px dashed rgba(51, 65, 85, 0.4); padding-top: 0.3rem; margin-top: 0.2rem;">
-              <span>Net Cash Deposited:</span>
-              <strong class="sale-alert-net">+${formatMoney(s.net_proceeds)}</strong>
-            </div>
-          </div>
-        </div>
-      `;
-    });
-  }
-
-  if (otherSales.length > 0) {
-    if (mySales.length > 0) {
-      html += `
-        <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-top: 0.5rem;">
-          Other Sales in the Market
-        </div>
-      `;
-    }
-
-    otherSales.forEach((s) => {
-      const prop = catalogProperties.find((cp) => cp.slug === s.property_slug);
-      const propName = prop ? prop.name : s.property_slug;
-      const color = prop ? prop.color_hex : '#38bdf8';
-
-      html += `
-        <div class="sale-alert-item">
-          <div class="sale-alert-header">
-            <span class="sale-alert-prop-name">
-              <span class="sale-alert-dot" style="background-color: ${color};"></span>
-              ${escapeHtml(propName)}
-            </span>
-            <span class="sale-alert-price">${formatMoney(s.sale_price)}</span>
-          </div>
-          <div class="sale-alert-details">
-            <div class="sale-alert-breakdown">
-              <span>Seller:</span>
-              <strong style="color: var(--text-main);">${escapeHtml(s.seller_name || 'Player')}</strong>
-            </div>
-            <div class="sale-alert-breakdown">
-              <span>Buyer:</span>
-              <strong style="color: var(--text-main);">${escapeHtml(s.buyer_name)}</strong>
-            </div>
-          </div>
-        </div>
-      `;
-    });
-  }
+  });
 
   modalSalesContent.innerHTML = html;
   marketSalesModal.classList.remove('hidden');
@@ -2526,7 +2496,14 @@ function checkTurnStartSalesModal() {
 
 // Realtime subscriptions
 function setupRealtimeSubscription(roomId) {
-  if (unsubscribeRealtime) unsubscribeRealtime();
+  if (currentSubscribedRoomId === roomId && unsubscribeRealtime) {
+    return;
+  }
+  if (unsubscribeRealtime) {
+    unsubscribeRealtime();
+    unsubscribeRealtime = null;
+  }
+  currentSubscribedRoomId = roomId;
 
   unsubscribeRealtime = subscribeToRoom(
     roomId,

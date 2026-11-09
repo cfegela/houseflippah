@@ -269,7 +269,7 @@ export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropert
         filter: `room_id=eq.${roomId}`,
       },
       (payload) => {
-        onPlayersChange(payload);
+        onPlayersChange && onPlayersChange(payload);
       }
     )
     .on(
@@ -281,7 +281,7 @@ export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropert
         filter: `id=eq.${roomId}`,
       },
       (payload) => {
-        onRoomChange(payload);
+        onRoomChange && onRoomChange(payload);
       }
     )
     .on(
@@ -293,7 +293,7 @@ export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropert
         filter: `room_id=eq.${roomId}`,
       },
       (payload) => {
-        onPropertiesChange(payload);
+        onPropertiesChange && onPropertiesChange(payload);
       }
     )
     .on(
