@@ -34,7 +34,6 @@ let selectedPropertySlug = null;
 let unsubscribeRealtime = null;
 let currentSubscribedRoomId = null;
 let lastKnownTurnKey = null;
-let lastKnownRound = null;
 
 // Audio Alert System (Web Audio API)
 let audioCtx = null;
@@ -111,65 +110,6 @@ async function playTurnChime() {
     }
   } catch (err) {
     console.warn('Could not play turn chime:', err);
-  }
-}
-
-async function playBoxingBell() {
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    if (ctx.state === 'suspended') {
-      await ctx.resume().catch(() => {});
-    }
-
-    const now = ctx.currentTime;
-
-    // Boxing match double bell strike: "Ding ... Ding!"
-    const strikes = [
-      { time: now, duration: 0.75, masterGain: 0.32 },
-      { time: now + 0.28, duration: 1.5, masterGain: 0.36 }
-    ];
-
-    // Authentic brass bell harmonic partials
-    const partials = [
-      { ratio: 1.0, gain: 0.5, decayMult: 1.0 },     // Fundamental (1250 Hz)
-      { ratio: 1.22, gain: 0.28, decayMult: 0.8 },   // Minor third (1525 Hz)
-      { ratio: 1.5, gain: 0.2, decayMult: 0.7 },     // Fifth (1875 Hz)
-      { ratio: 2.02, gain: 0.16, decayMult: 0.55 },  // Octave overtone (2525 Hz)
-      { ratio: 3.1, gain: 0.1, decayMult: 0.35 },    // High metal resonance (3875 Hz)
-      { ratio: 4.25, gain: 0.05, decayMult: 0.2 },   // Initial hammer strike bite (5312 Hz)
-    ];
-
-    const baseFreq = 1250;
-
-    strikes.forEach(({ time, duration, masterGain }) => {
-      partials.forEach(({ ratio, gain, decayMult }) => {
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(baseFreq * ratio, time);
-
-        const decayTime = duration * decayMult;
-        const peakVol = masterGain * gain;
-
-        gainNode.gain.setValueAtTime(0.0001, time);
-        gainNode.gain.exponentialRampToValueAtTime(peakVol, time + 0.002);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, time + decayTime);
-
-        osc.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        osc.start(time);
-        osc.stop(time + decayTime + 0.05);
-      });
-    });
-
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate([100, 50, 150]);
-    }
-  } catch (err) {
-    console.warn('Could not play boxing bell:', err);
   }
 }
 
@@ -634,7 +574,6 @@ function renderSeats() {
 function showLobbyView(room, players) {
   currentRoom = room;
   currentPlayers = players;
-  lastKnownRound = null;
 
   document.getElementById('app').classList.add('in-lobby');
   landingView.classList.add('hidden');
@@ -656,7 +595,6 @@ function showLandingView() {
   currentRoom = null;
   currentPlayers = [];
   lastKnownTurnKey = null;
-  lastKnownRound = null;
   lastAcknowledgedSalesRound = 0;
   lastAcknowledgedDelinquencyRound = 0;
   lastAcknowledgedForeclosureRound = 0;
@@ -813,17 +751,8 @@ function renderGameHUD() {
   const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
 
   // Turn & Round Indicator Box
-  let isNewRoundTransition = false;
-  if (currentRoom) {
-    const currentRoundNum = currentRoom.current_round || 1;
-    if (roundNumberDisplay) {
-      roundNumberDisplay.textContent = currentRoundNum;
-    }
-    if (lastKnownRound !== null && currentRoundNum > lastKnownRound) {
-      isNewRoundTransition = true;
-      playBoxingBell();
-    }
-    lastKnownRound = currentRoundNum;
+  if (roundNumberDisplay && currentRoom) {
+    roundNumberDisplay.textContent = currentRoom.current_round || 1;
   }
 
   if (activePlayer) {
@@ -840,10 +769,7 @@ function renderGameHUD() {
     const currentTurnKey = `${currentRoom.current_round || 1}:${activeSeat}`;
     if (lastKnownTurnKey !== currentTurnKey) {
       lastKnownTurnKey = currentTurnKey;
-      // When a new round begins, only the boxing bell plays — skip the turn chime
-      if (!isNewRoundTransition) {
-        playTurnChime();
-      }
+      playTurnChime();
     }
   } else {
     turnIndicatorBox.classList.remove('is-my-turn');
