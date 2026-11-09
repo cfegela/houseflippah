@@ -414,8 +414,6 @@ export { calculatePlayerEquity, getLeaderboardData } from './leaderboard.js';
 import { getLeaderboardData } from './leaderboard.js';
 export { getDelinquentProperties } from './delinquency.js';
 import { getDelinquentProperties } from './delinquency.js';
-export { getDisplayCash, getPendingSalesProceeds } from './wallet.js';
-import { getDisplayCash } from './wallet.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -855,8 +853,7 @@ function renderGameHUD() {
 
   // Wallet (if present)
   if (myPlayer && myWalletDisplay) {
-    const displayCash = getDisplayCash(myPlayer, currentRoom?.current_round, lastAcknowledgedSalesRound, propertySales);
-    myWalletDisplay.textContent = formatMoney(displayCash);
+    myWalletDisplay.textContent = formatMoney(myPlayer.cash);
   }
 
   // Resign Game control (available to all players during active game)
@@ -875,8 +872,8 @@ function renderGameHUD() {
     btnGameEnd.classList.add('hidden');
   }
 
-  // Turn-start alerts check (Delinquency first, then Sales)
-  checkTurnStartAlerts();
+  // Round-start alerts check for all players (Foreclosure, Delinquency, Sales)
+  checkRoundStartAlerts();
 }
 
 // Render Zillow-Style Properties Feed
@@ -1970,7 +1967,7 @@ function renderFinancialReport() {
   if (!financialReportContainer) return;
 
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
-  const cash = getDisplayCash(myPlayer, currentRoom?.current_round, lastAcknowledgedSalesRound, propertySales);
+  const cash = myPlayer ? myPlayer.cash : 0;
   const myProperties = gameProperties.filter((gp) => gp.owner_user_id === currentUser?.id);
 
   // Build one line item per owned property
@@ -2214,39 +2211,34 @@ function renderMarketReport() {
   marketReportContainer.innerHTML = tempCardHtml + leaderboardCardHtml + salesHistoryHtml + foreclosureHistoryHtml;
 }
 
-// Turn-Start Alerts Coordination:
+// Round-Start Alerts Coordination:
+// All players receive their personal alerts at the beginning of the round (regardless of whose turn it is).
 // 1. Foreclosure Alert (most critical - property already seized)
 // 2. Delinquency Warning (at risk this round)
 // 3. Sales Report (proceeds earned)
-function checkTurnStartAlerts() {
+function checkRoundStartAlerts() {
   if (!currentRoom || currentRoom.status !== 'in_progress') return;
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   if (!myPlayer) return;
 
-  const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
-  if (!isMyTurn) return;
-
   // 1. Check for Foreclosed Properties
-  if (checkTurnStartForeclosureModal()) {
+  if (checkRoundStartForeclosureModal()) {
     return;
   }
 
   // 2. Check for Delinquent Properties
-  if (checkTurnStartDelinquencyModal()) {
+  if (checkRoundStartDelinquencyModal()) {
     return;
   }
 
   // 3. Check for Automated Sales
-  checkTurnStartSalesModal();
+  checkRoundStartSalesModal();
 }
 
-function checkTurnStartForeclosureModal() {
+function checkRoundStartForeclosureModal() {
   if (!foreclosureAlertModal || !currentRoom || currentRoom.status !== 'in_progress') return false;
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   if (!myPlayer) return false;
-
-  const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
-  if (!isMyTurn) return false;
 
   if (lastAcknowledgedForeclosureRound >= currentRoom.current_round) return false;
 
@@ -2325,22 +2317,21 @@ function closeForeclosureModal() {
     foreclosureAlertModal.classList.add('hidden');
   }
   // Next in sequence: check Delinquency, or if none, check Sales
-  if (!checkTurnStartDelinquencyModal()) {
-    checkTurnStartSalesModal();
+  if (!checkRoundStartDelinquencyModal()) {
+    checkRoundStartSalesModal();
   }
 }
 
-function checkTurnStartDelinquencyModal() {
+function checkRoundStartDelinquencyModal() {
   if (!delinquencyAlertModal || !currentRoom || currentRoom.status !== 'in_progress') return false;
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   if (!myPlayer) return false;
 
-  const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
-  if (!isMyTurn) return false;
+  if (lastAcknowledgedDelinquencyRound >= currentRoom.current_round) return false;
 
   const myDelinquentProps = getDelinquentProperties(currentUser?.id, gameProperties, currentRoom.current_round);
 
-  if (myDelinquentProps.length > 0 && lastAcknowledgedDelinquencyRound < currentRoom.current_round) {
+  if (myDelinquentProps.length > 0) {
     lastAcknowledgedDelinquencyRound = currentRoom.current_round;
     showDelinquencyModal(myDelinquentProps);
     return true;
@@ -2406,17 +2397,14 @@ function closeDelinquencyModal() {
     delinquencyAlertModal.classList.add('hidden');
   }
   // Check if sales modal should appear next
-  checkTurnStartSalesModal();
+  checkRoundStartSalesModal();
 }
 
-// Turn-Start Notification: Market Sales Modal Alert
-function checkTurnStartSalesModal() {
+// Round-Start Notification: Market Sales Modal Alert
+function checkRoundStartSalesModal() {
   if (!marketSalesModal || !currentRoom || currentRoom.status !== 'in_progress') return;
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   if (!myPlayer) return;
-
-  const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
-  if (!isMyTurn) return;
 
   // Only check once per round per player
   if (lastAcknowledgedSalesRound >= currentRoom.current_round) return;
@@ -2432,7 +2420,7 @@ function checkTurnStartSalesModal() {
     return;
   }
 
-  // Filter ONLY sales belonging to the current player (personal turn-start alert)
+  // Filter ONLY sales belonging to the current player (personal round-start alert)
   const mySales = recentSales.filter((s) => s.seller_user_id === currentUser?.id);
 
   // If this player had no sales in the round transition, acknowledge this round and do not display modal
@@ -2441,16 +2429,8 @@ function checkTurnStartSalesModal() {
     return;
   }
 
-  // Mark as acknowledged immediately so subsequent re-renders during this turn do not re-trigger
+  // Mark as acknowledged immediately so subsequent re-renders during this round do not re-trigger
   lastAcknowledgedSalesRound = currentRoom.current_round;
-
-  // Immediately reflect the credited balance at the start of the turn
-  if (myPlayer && myWalletDisplay) {
-    myWalletDisplay.textContent = formatMoney(myPlayer.cash);
-  }
-  if (currentGameSubpage === 'financial-report') {
-    renderFinancialReport();
-  }
 
   const count = mySales.length;
   modalSalesTitle.textContent = count === 1 ? '🎉 Property Sold!' : `🎉 ${count} Properties Sold!`;
