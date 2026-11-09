@@ -25,8 +25,10 @@ let currentPlayers = [];
 let catalogProperties = [];
 let gameProperties = [];
 let propertySales = [];
+let propertyForeclosures = [];
 let lastAcknowledgedSalesRound = 0;
 let lastAcknowledgedDelinquencyRound = 0;
+let lastAcknowledgedForeclosureRound = 0;
 let currentGameSubpage = 'dashboard';
 let selectedPropertySlug = null;
 let unsubscribeRealtime = null;
@@ -300,6 +302,39 @@ async function playWarningSound() {
   }
 }
 
+async function playForeclosureSound() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      await ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+    // Heavy gavel strike / alarm sound: lower frequency descending punch
+    [0, 0.22].forEach((offset, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(idx === 0 ? 220 : 165, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(80, now + offset + 0.18);
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.28, now + offset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.22);
+    });
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([150, 80, 200]);
+    }
+  } catch (err) {
+    // Audio context may be blocked before user interaction
+  }
+}
+
 // DOM Elements - Alerts
 const alertBox = document.getElementById('alert-box');
 const alertMsg = document.getElementById('alert-msg');
@@ -460,6 +495,13 @@ const modalDelinquencySubtitle = document.getElementById('modal-delinquency-subt
 const modalDelinquencyContent = document.getElementById('modal-delinquency-content');
 const btnCloseDelinquencyModal = document.getElementById('btn-close-delinquency-modal');
 
+// DOM Elements - Foreclosure Alert Modal (Turn Start Alert)
+const foreclosureAlertModal = document.getElementById('foreclosure-alert-modal');
+const modalForeclosureTitle = document.getElementById('modal-foreclosure-title');
+const modalForeclosureSubtitle = document.getElementById('modal-foreclosure-subtitle');
+const modalForeclosureContent = document.getElementById('modal-foreclosure-content');
+const btnCloseForeclosureModal = document.getElementById('btn-close-foreclosure-modal');
+
 // Helpers
 function formatMoney(amount) {
   return '$' + Number(amount || 0).toLocaleString('en-US');
@@ -615,6 +657,9 @@ function showLandingView() {
   lastKnownRound = null;
   lastAcknowledgedSalesRound = 0;
   lastAcknowledgedDelinquencyRound = 0;
+  lastAcknowledgedForeclosureRound = 0;
+  propertyForeclosures = [];
+  if (foreclosureAlertModal) foreclosureAlertModal.classList.add('hidden');
   if (delinquencyAlertModal) delinquencyAlertModal.classList.add('hidden');
   if (marketSalesModal) marketSalesModal.classList.add('hidden');
   currentGameSubpage = 'dashboard';
@@ -2124,10 +2169,49 @@ function renderMarketReport() {
     `;
   }
 
-  marketReportContainer.innerHTML = tempCardHtml + leaderboardCardHtml + salesHistoryHtml;
+  // 4. Foreclosure History Section: Show all bank foreclosures
+  let foreclosureHistoryHtml = '';
+  if (propertyForeclosures && propertyForeclosures.length > 0) {
+    const itemsHtml = propertyForeclosures.map((f) => {
+      const prop = catalogProperties.find((cp) => cp.slug === f.property_slug);
+      const propName = prop ? prop.name : f.property_slug;
+      const color = prop ? prop.color_hex : '#dc2626';
+      return `
+        <div class="sales-history-item" style="border-left: 4px solid #dc2626;">
+          <div class="sales-history-stripe" style="background-color: ${color};"></div>
+          <div class="sales-history-content">
+            <div class="sales-history-prop-group">
+              <span class="sales-history-prop-name">${escapeHtml(propName)}</span>
+              <div class="sales-history-meta">
+                <span style="color: #ef4444;">Foreclosed from: ${escapeHtml(f.owner_name)}</span>
+              </div>
+            </div>
+            <div class="sales-history-price-group">
+              <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; font-weight: 700; font-size: 0.75rem;">BANK REPOSSESSED</span>
+              <span class="sales-history-badge">Round ${f.round_number}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    foreclosureHistoryHtml = `
+      <div class="sales-history-section" style="margin-top: 1.5rem;">
+        <h3 class="sales-history-title" style="color: #ef4444;">Foreclosure History (${propertyForeclosures.length})</h3>
+        <div class="sales-history-list">
+          ${itemsHtml}
+        </div>
+      </div>
+    `;
+  }
+
+  marketReportContainer.innerHTML = tempCardHtml + leaderboardCardHtml + salesHistoryHtml + foreclosureHistoryHtml;
 }
 
-// Turn-Start Alerts Coordination (Delinquency first, then Sales)
+// Turn-Start Alerts Coordination:
+// 1. Foreclosure Alert (most critical - property already seized)
+// 2. Delinquency Warning (at risk this round)
+// 3. Sales Report (proceeds earned)
 function checkTurnStartAlerts() {
   if (!currentRoom || currentRoom.status !== 'in_progress') return;
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
@@ -2136,17 +2220,127 @@ function checkTurnStartAlerts() {
   const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
   if (!isMyTurn) return;
 
-  // 1. Check for Delinquent Properties
+  // 1. Check for Foreclosed Properties
+  if (checkTurnStartForeclosureModal()) {
+    return;
+  }
+
+  // 2. Check for Delinquent Properties
+  if (checkTurnStartDelinquencyModal()) {
+    return;
+  }
+
+  // 3. Check for Automated Sales
+  checkTurnStartSalesModal();
+}
+
+function checkTurnStartForeclosureModal() {
+  if (!foreclosureAlertModal || !currentRoom || currentRoom.status !== 'in_progress') return false;
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  if (!myPlayer) return false;
+
+  const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
+  if (!isMyTurn) return false;
+
+  if (lastAcknowledgedForeclosureRound >= currentRoom.current_round) return false;
+
+  const previousRound = (currentRoom.current_round || 1) - 1;
+  const myForeclosures = (propertyForeclosures || []).filter(
+    (f) => f.owner_user_id === currentUser?.id && f.round_number === previousRound
+  );
+
+  if (myForeclosures.length === 0) {
+    return false;
+  }
+
+  lastAcknowledgedForeclosureRound = currentRoom.current_round;
+  showForeclosureModal(myForeclosures);
+  return true;
+}
+
+function showForeclosureModal(foreclosures) {
+  if (!foreclosureAlertModal || !modalForeclosureContent) return;
+
+  playForeclosureSound();
+
+  const count = foreclosures.length;
+  modalForeclosureTitle.textContent = count === 1 ? 'Property Foreclosed!' : 'Properties Foreclosed!';
+  modalForeclosureSubtitle.textContent = `The bank has seized ${count === 1 ? 'a property' : `${count} properties`} due to unpaid mortgage delinquency.`;
+
+  let html = `
+    <div style="background: rgba(220, 38, 38, 0.12); border: 1px solid rgba(220, 38, 38, 0.4); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.5rem;">
+      <div style="font-size: 1.05rem; font-weight: 800; color: #ef4444; margin-bottom: 0.25rem;">
+        🏦 Seized by the Bank
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.45;">
+        You missed two consecutive mortgage payments on ${count === 1 ? 'this property' : 'these properties'}. The bank has cleared the outstanding mortgage debt and returned the deed to the marketplace as available inventory.
+      </div>
+    </div>
+  `;
+
+  foreclosures.forEach((f) => {
+    const prop = catalogProperties.find((cp) => cp.slug === f.property_slug);
+    const propName = prop ? prop.name : f.property_slug;
+    const color = prop ? prop.color_hex : '#dc2626';
+    const numImprovements = Array.isArray(f.improvements) ? f.improvements.length : 0;
+
+    html += `
+      <div class="foreclosure-alert-item">
+        <div class="foreclosure-alert-header">
+          <span class="delinquency-alert-prop-name">
+            <span class="delinquency-alert-dot" style="background-color: ${color};"></span>
+            ${escapeHtml(propName)}
+          </span>
+          <span class="foreclosure-alert-badge">REPOSSESSED</span>
+        </div>
+        <div class="foreclosure-alert-details">
+          <div class="delinquency-alert-breakdown">
+            <span>Status:</span>
+            <strong style="color: #ef4444; font-weight: 700;">Returned to Bank</strong>
+          </div>
+          <div class="delinquency-alert-breakdown">
+            <span>Mortgage Balance:</span>
+            <strong style="color: #22c55e; font-weight: 600;">Cleared to $0</strong>
+          </div>
+          ${numImprovements > 0 ? `
+          <div class="delinquency-alert-breakdown">
+            <span>Improvements Preserved:</span>
+            <strong style="color: #38bdf8; font-weight: 600;">${numImprovements} installed</strong>
+          </div>` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  modalForeclosureContent.innerHTML = html;
+  foreclosureAlertModal.classList.remove('hidden');
+}
+
+function closeForeclosureModal() {
+  if (foreclosureAlertModal) {
+    foreclosureAlertModal.classList.add('hidden');
+  }
+  // Next in sequence: check Delinquency
+  checkTurnStartDelinquencyModal();
+}
+
+function checkTurnStartDelinquencyModal() {
+  if (!delinquencyAlertModal || !currentRoom || currentRoom.status !== 'in_progress') return false;
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  if (!myPlayer) return false;
+
+  const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
+  if (!isMyTurn) return false;
+
   const myDelinquentProps = getDelinquentProperties(currentUser?.id, gameProperties, currentRoom.current_round);
 
   if (myDelinquentProps.length > 0 && lastAcknowledgedDelinquencyRound < currentRoom.current_round) {
     lastAcknowledgedDelinquencyRound = currentRoom.current_round;
     showDelinquencyModal(myDelinquentProps);
-    return;
+    return true;
   }
 
-  // 2. If no delinquency modal needs to show, check for sales modal
-  checkTurnStartSalesModal();
+  return false;
 }
 
 function showDelinquencyModal(delinquentProps) {
@@ -2346,7 +2540,7 @@ function setupRealtimeSubscription(roomId) {
     roomId,
     async () => {
       try {
-        const { room: latestRoom, players: updatedPlayers, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(roomId);
+        const { room: latestRoom, players: updatedPlayers, gameProperties: updatedProps, propertySales: updatedSales, propertyForeclosures: updatedForeclosures } = await fetchGameData(roomId);
         if (latestRoom.status === 'abandoned') {
           showLandingView();
           return;
@@ -2356,6 +2550,7 @@ function setupRealtimeSubscription(roomId) {
           currentPlayers = updatedPlayers;
           gameProperties = updatedProps;
           propertySales = updatedSales || [];
+          propertyForeclosures = updatedForeclosures || [];
           showGameOverModal();
           return;
         }
@@ -2363,6 +2558,7 @@ function setupRealtimeSubscription(roomId) {
         currentPlayers = updatedPlayers;
         gameProperties = updatedProps;
         propertySales = updatedSales || [];
+        propertyForeclosures = updatedForeclosures || [];
         if (currentRoom.status === 'in_progress') {
           renderGameHUD();
           renderProperties();
@@ -2397,10 +2593,11 @@ function setupRealtimeSubscription(roomId) {
     async () => {
       // Game property ownership changes
       try {
-        const { gameProperties: updatedProps, players: updatedPlayers, propertySales: updatedSales } = await fetchGameData(roomId);
+        const { gameProperties: updatedProps, players: updatedPlayers, propertySales: updatedSales, propertyForeclosures: updatedForeclosures } = await fetchGameData(roomId);
         gameProperties = updatedProps;
         currentPlayers = updatedPlayers;
         propertySales = updatedSales || [];
+        propertyForeclosures = updatedForeclosures || [];
         renderGameHUD();
         renderProperties();
         if (currentGameSubpage === 'make-payments') renderMortgagePayments();
@@ -2417,10 +2614,11 @@ function setupRealtimeSubscription(roomId) {
       }
     },
     async () => {
-      // Property sales updates
+      // Property sales & foreclosures updates
       try {
-        const { propertySales: updatedSales, players: updatedPlayers, gameProperties: updatedProps } = await fetchGameData(roomId);
+        const { propertySales: updatedSales, propertyForeclosures: updatedForeclosures, players: updatedPlayers, gameProperties: updatedProps } = await fetchGameData(roomId);
         propertySales = updatedSales || [];
+        propertyForeclosures = updatedForeclosures || [];
         currentPlayers = updatedPlayers;
         gameProperties = updatedProps;
         renderGameHUD();
@@ -2428,7 +2626,7 @@ function setupRealtimeSubscription(roomId) {
         if (currentGameSubpage === 'market-report') renderMarketReport();
         if (currentGameSubpage === 'financial-report') renderFinancialReport();
       } catch (err) {
-        console.error('Error refreshing sales:', err);
+        console.error('Error refreshing sales and foreclosures:', err);
       }
     }
   );
@@ -2688,12 +2886,25 @@ if (btnGameOverHome) {
   });
 }
 
+if (btnCloseForeclosureModal) {
+  btnCloseForeclosureModal.addEventListener('click', closeForeclosureModal);
+}
+
+if (foreclosureAlertModal) {
+  foreclosureAlertModal.addEventListener('click', (e) => {
+    if (e.target === foreclosureAlertModal) closeForeclosureModal();
+  });
+}
+
 endGameModal.addEventListener('click', (e) => {
   if (e.target === endGameModal) closeEndGameModal();
 });
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (foreclosureAlertModal && !foreclosureAlertModal.classList.contains('hidden')) {
+      closeForeclosureModal();
+    }
     if (delinquencyAlertModal && !delinquencyAlertModal.classList.contains('hidden')) {
       closeDelinquencyModal();
     }

@@ -446,6 +446,47 @@ async function run() {
         `
       },
       {
+        name: 'Foreclosure Alert Modal (Turn Start Repossession Notice)',
+        setupJs: `
+          hideAllModals();
+          const modal = document.getElementById('foreclosure-alert-modal');
+          document.getElementById('modal-foreclosure-content').innerHTML = \`
+            <div style="background: rgba(220, 38, 38, 0.12); border: 1px solid rgba(220, 38, 38, 0.4); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.5rem;">
+              <div style="font-size: 1.05rem; font-weight: 800; color: #ef4444; margin-bottom: 0.25rem;">
+                🏦 Seized by the Bank
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.45;">
+                You missed two consecutive mortgage payments. The bank has cleared the outstanding mortgage debt and returned the deed to the marketplace.
+              </div>
+            </div>
+            <div class="foreclosure-alert-item">
+              <div class="foreclosure-alert-header">
+                <span class="delinquency-alert-prop-name">
+                  <span class="delinquency-alert-dot" style="background-color: #8B5A2B;"></span>
+                  Mediterranean Avenue
+                </span>
+                <span class="foreclosure-alert-badge">REPOSSESSED</span>
+              </div>
+              <div class="foreclosure-alert-details">
+                <div class="delinquency-alert-breakdown">
+                  <span>Status:</span>
+                  <strong style="color: #ef4444; font-weight: 700;">Returned to Bank</strong>
+                </div>
+                <div class="delinquency-alert-breakdown">
+                  <span>Mortgage Balance:</span>
+                  <strong style="color: #22c55e; font-weight: 600;">Cleared to $0</strong>
+                </div>
+                <div class="delinquency-alert-breakdown">
+                  <span>Improvements Preserved:</span>
+                  <strong style="color: #38bdf8; font-weight: 600;">2 installed</strong>
+                </div>
+              </div>
+            </div>
+          \`;
+          modal.classList.remove('hidden');
+        `
+      },
+      {
         name: 'Resign Game Confirmation Modal (50/50 Button Row)',
         setupJs: `
           hideAllModals();

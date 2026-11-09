@@ -296,6 +296,31 @@
         </div>
       </div>
 
+      <!-- Foreclosure Alert Modal (Turn Start Notification) -->
+      <div id="foreclosure-alert-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 520px; text-align: left; width: 100%;">
+          <div style="margin-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+              <span style="font-size: 1.5rem;">🏦</span>
+              <h3 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #dc2626;" id="modal-foreclosure-title">Property Foreclosure Notice</h3>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.45;" id="modal-foreclosure-subtitle">
+              The bank has seized your property due to unpaid mortgage delinquency.
+            </p>
+          </div>
+
+          <div id="modal-foreclosure-content" style="max-height: 55vh; overflow-y: auto; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+            <!-- Dynamically populated foreclosed properties list -->
+          </div>
+
+          <div class="actions-row" style="justify-content: flex-end;">
+            <button id="btn-close-foreclosure-modal" class="btn btn-danger" style="width: 100%; padding: 0.8rem; font-size: 1rem; font-weight: 700;">
+              Acknowledge & Continue
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Delinquency Alert Modal (Turn Start Notification) -->
       <div id="delinquency-alert-modal" class="modal-overlay hidden">
         <div class="modal-card" style="max-width: 520px; text-align: left; width: 100%;">

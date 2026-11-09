@@ -207,12 +207,13 @@ export async function endTurn(roomId) {
  * Fetch full game data (room, players, catalog, room property instances, and property sales).
  */
 export async function fetchGameData(roomId) {
-  const [roomRes, playersRes, catalogRes, gamePropsRes, salesRes] = await Promise.all([
+  const [roomRes, playersRes, catalogRes, gamePropsRes, salesRes, foreclosuresRes] = await Promise.all([
     supabase.from('rooms').select('*').eq('id', roomId).single(),
     supabase.from('room_players').select('*').eq('room_id', roomId).order('seat_number', { ascending: true }),
     supabase.from('catalog_properties').select('*').order('board_position', { ascending: true }),
     supabase.from('game_properties').select('*').eq('room_id', roomId),
     supabase.from('property_sales').select('*').eq('room_id', roomId).order('round_number', { ascending: false }).order('created_at', { ascending: false }),
+    supabase.from('property_foreclosures').select('*').eq('room_id', roomId).order('round_number', { ascending: false }).order('created_at', { ascending: false }),
   ]);
 
   if (roomRes.error) throw roomRes.error;
@@ -226,6 +227,7 @@ export async function fetchGameData(roomId) {
     catalog: catalogRes.data || [],
     gameProperties: gamePropsRes.data || [],
     propertySales: salesRes?.data || [],
+    propertyForeclosures: foreclosuresRes?.data || [],
   };
 }
 
@@ -300,6 +302,18 @@ export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropert
         event: '*',
         schema: 'public',
         table: 'property_sales',
+        filter: `room_id=eq.${roomId}`,
+      },
+      (payload) => {
+        onSalesChange && onSalesChange(payload);
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'property_foreclosures',
         filter: `room_id=eq.${roomId}`,
       },
       (payload) => {
