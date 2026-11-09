@@ -25,6 +25,7 @@ let catalogProperties = [];
 let gameProperties = [];
 let propertySales = [];
 let lastAcknowledgedSalesRound = 0;
+let lastAcknowledgedDelinquencyRound = 0;
 let currentGameSubpage = 'dashboard';
 let selectedPropertySlug = null;
 let unsubscribeRealtime = null;
@@ -266,6 +267,38 @@ async function playCashRegisterSound() {
   }
 }
 
+async function playWarningSound() {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      await ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+    [0, 0.16].forEach((offset) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(370, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(290, now + offset + 0.12);
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.2, now + offset + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.13);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.14);
+    });
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([80, 50, 80]);
+    }
+  } catch (err) {
+    // Audio context may be blocked before user interaction
+  }
+}
+
 // DOM Elements - Alerts
 const alertBox = document.getElementById('alert-box');
 const alertMsg = document.getElementById('alert-msg');
@@ -341,6 +374,8 @@ export { MARKET_TEMPERATURE_ODDS, calculateFlipstimate } from './odds.js';
 import { calculateFlipstimate } from './odds.js';
 export { calculatePlayerEquity, getLeaderboardData } from './leaderboard.js';
 import { getLeaderboardData } from './leaderboard.js';
+export { getDelinquentProperties } from './delinquency.js';
+import { getDelinquentProperties } from './delinquency.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -400,6 +435,13 @@ const modalSalesTitle = document.getElementById('modal-sales-title');
 const modalSalesSubtitle = document.getElementById('modal-sales-subtitle');
 const modalSalesContent = document.getElementById('modal-sales-content');
 const btnCloseSalesModal = document.getElementById('btn-close-sales-modal');
+
+// DOM Elements - Delinquency Alert Modal (Turn Start Alert)
+const delinquencyAlertModal = document.getElementById('delinquency-alert-modal');
+const modalDelinquencyTitle = document.getElementById('modal-delinquency-title');
+const modalDelinquencySubtitle = document.getElementById('modal-delinquency-subtitle');
+const modalDelinquencyContent = document.getElementById('modal-delinquency-content');
+const btnCloseDelinquencyModal = document.getElementById('btn-close-delinquency-modal');
 
 // Helpers
 function formatMoney(amount) {
@@ -554,6 +596,10 @@ function showLandingView() {
   currentPlayers = [];
   lastKnownTurnKey = null;
   lastKnownRound = null;
+  lastAcknowledgedSalesRound = 0;
+  lastAcknowledgedDelinquencyRound = 0;
+  if (delinquencyAlertModal) delinquencyAlertModal.classList.add('hidden');
+  if (marketSalesModal) marketSalesModal.classList.add('hidden');
   currentGameSubpage = 'dashboard';
   setRoomUrl(null);
   closeQrModal();
@@ -747,8 +793,8 @@ function renderGameHUD() {
     btnGameEnd.classList.add('hidden');
   }
 
-  // Turn-start sales alert check
-  checkTurnStartSalesModal();
+  // Turn-start alerts check (Delinquency first, then Sales)
+  checkTurnStartAlerts();
 }
 
 // Render Zillow-Style Properties Feed
@@ -1625,6 +1671,16 @@ if (improvePropertyModal) {
   });
 }
 
+if (btnCloseDelinquencyModal) {
+  btnCloseDelinquencyModal.addEventListener('click', closeDelinquencyModal);
+}
+
+if (delinquencyAlertModal) {
+  delinquencyAlertModal.addEventListener('click', (e) => {
+    if (e.target === delinquencyAlertModal) closeDelinquencyModal();
+  });
+}
+
 if (btnCloseSalesModal) {
   btnCloseSalesModal.addEventListener('click', () => {
     if (marketSalesModal) marketSalesModal.classList.add('hidden');
@@ -2010,6 +2066,90 @@ function renderMarketReport() {
   }
 
   marketReportContainer.innerHTML = tempCardHtml + leaderboardCardHtml + salesHistoryHtml;
+}
+
+// Turn-Start Alerts Coordination (Delinquency first, then Sales)
+function checkTurnStartAlerts() {
+  if (!currentRoom || currentRoom.status !== 'in_progress') return;
+  const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  if (!myPlayer) return;
+
+  const isMyTurn = currentRoom.current_turn_seat === myPlayer.seat_number;
+  if (!isMyTurn) return;
+
+  // 1. Check for Delinquent Properties
+  const myDelinquentProps = getDelinquentProperties(currentUser?.id, gameProperties, currentRoom.current_round);
+
+  if (myDelinquentProps.length > 0 && lastAcknowledgedDelinquencyRound < currentRoom.current_round) {
+    lastAcknowledgedDelinquencyRound = currentRoom.current_round;
+    showDelinquencyModal(myDelinquentProps);
+    return;
+  }
+
+  // 2. If no delinquency modal needs to show, check for sales modal
+  checkTurnStartSalesModal();
+}
+
+function showDelinquencyModal(delinquentProps) {
+  if (!delinquencyAlertModal || !modalDelinquencyContent) return;
+
+  playWarningSound();
+
+  const count = delinquentProps.length;
+  modalDelinquencyTitle.textContent = 'Mortgage Delinquency Warning';
+  modalDelinquencySubtitle.textContent = `You have ${count} ${count === 1 ? 'property' : 'properties'} with past-due mortgage payments. If left unpaid by the end of Round ${currentRoom.current_round}, ${count === 1 ? 'it' : 'they'} will be foreclosed!`;
+
+  let html = `
+    <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.5rem;">
+      <div style="font-size: 1.05rem; font-weight: 800; color: #f87171; margin-bottom: 0.25rem;">
+        ⚠️ Foreclosure Threat
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.45;">
+        You missed a mortgage payment last round. To prevent losing your investment, go to <strong>Make Payments</strong> to make a single payment (to stave off foreclosure) or double payment (to bring current).
+      </div>
+    </div>
+  `;
+
+  delinquentProps.forEach((gp) => {
+    const prop = catalogProperties.find((cp) => cp.slug === gp.property_slug);
+    const propName = prop ? prop.name : gp.property_slug;
+    const color = prop ? prop.color_hex : '#ef4444';
+    const singlePayment = prop ? Math.floor(prop.cost / 40) : 0;
+    const mortgageBalance = gp.mortgage_balance || 0;
+
+    html += `
+      <div class="delinquency-alert-item">
+        <div class="delinquency-alert-header">
+          <span class="delinquency-alert-prop-name">
+            <span class="delinquency-alert-dot" style="background-color: ${color};"></span>
+            ${escapeHtml(propName)}
+          </span>
+          <span class="delinquency-alert-badge">Delinquent</span>
+        </div>
+        <div class="delinquency-alert-details">
+          <div class="delinquency-alert-breakdown">
+            <span>Payment to Stave Off:</span>
+            <strong style="color: #f87171; font-weight: 700;">${formatMoney(singlePayment)}</strong>
+          </div>
+          <div class="delinquency-alert-breakdown">
+            <span>Remaining Mortgage Balance:</span>
+            <strong style="color: var(--text-main); font-weight: 600;">${formatMoney(mortgageBalance)}</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  modalDelinquencyContent.innerHTML = html;
+  delinquencyAlertModal.classList.remove('hidden');
+}
+
+function closeDelinquencyModal() {
+  if (delinquencyAlertModal) {
+    delinquencyAlertModal.classList.add('hidden');
+  }
+  // Check if sales modal should appear next
+  checkTurnStartSalesModal();
 }
 
 // Turn-Start Notification: Market Sales Modal Alert
@@ -2417,6 +2557,9 @@ endGameModal.addEventListener('click', (e) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (delinquencyAlertModal && !delinquencyAlertModal.classList.contains('hidden')) {
+      closeDelinquencyModal();
+    }
     if (marketSalesModal && !marketSalesModal.classList.contains('hidden')) {
       marketSalesModal.classList.add('hidden');
       lastAcknowledgedSalesRound = currentRoom?.current_round || 0;

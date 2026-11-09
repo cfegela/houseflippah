@@ -156,9 +156,45 @@ async function run() {
         `
       },
       {
-        name: 'Property Details View (Back + Buy side-by-side)',
+        name: 'Delinquency Alert Modal (Turn Start Warning)',
         setupJs: `
           document.getElementById('improve-property-modal').classList.add('hidden');
+          document.getElementById('delinquency-alert-modal').classList.remove('hidden');
+          document.getElementById('modal-delinquency-content').innerHTML = \`
+            <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 0.5rem;">
+              <div style="font-size: 1.05rem; font-weight: 800; color: #f87171; margin-bottom: 0.25rem;">
+                ⚠️ Foreclosure Threat
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.45;">
+                You missed a mortgage payment last round. To prevent losing your investment, go to Make Payments to make a payment.
+              </div>
+            </div>
+            <div class="delinquency-alert-item">
+              <div class="delinquency-alert-header">
+                <span class="delinquency-alert-prop-name">
+                  <span class="delinquency-alert-dot" style="background-color: #8B5A2B;"></span>
+                  Mediterranean Avenue
+                </span>
+                <span class="delinquency-alert-badge">Delinquent</span>
+              </div>
+              <div class="delinquency-alert-details">
+                <div class="delinquency-alert-breakdown">
+                  <span>Payment to Stave Off:</span>
+                  <strong style="color: #f87171; font-weight: 700;">$1,500</strong>
+                </div>
+                <div class="delinquency-alert-breakdown">
+                  <span>Remaining Mortgage Balance:</span>
+                  <strong style="color: var(--text-main); font-weight: 600;">$54,000</strong>
+                </div>
+              </div>
+            </div>
+          \`;
+        `
+      },
+      {
+        name: 'Property Details View (Back + Buy side-by-side)',
+        setupJs: `
+          document.getElementById('delinquency-alert-modal').classList.add('hidden');
           document.getElementById('game-dashboard-view').classList.add('hidden');
           document.getElementById('game-property-details-view').classList.remove('hidden');
           document.getElementById('property-details-container').innerHTML = \`
