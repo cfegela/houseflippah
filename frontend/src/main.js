@@ -414,6 +414,8 @@ export { calculatePlayerEquity, getLeaderboardData } from './leaderboard.js';
 import { getLeaderboardData } from './leaderboard.js';
 export { getDelinquentProperties } from './delinquency.js';
 import { getDelinquentProperties } from './delinquency.js';
+export { getDisplayCash, getPendingSalesProceeds } from './wallet.js';
+import { getDisplayCash } from './wallet.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -853,7 +855,8 @@ function renderGameHUD() {
 
   // Wallet (if present)
   if (myPlayer && myWalletDisplay) {
-    myWalletDisplay.textContent = formatMoney(myPlayer.cash);
+    const displayCash = getDisplayCash(myPlayer, currentRoom?.current_round, lastAcknowledgedSalesRound, propertySales);
+    myWalletDisplay.textContent = formatMoney(displayCash);
   }
 
   // Resign Game control (available to all players during active game)
@@ -1967,7 +1970,7 @@ function renderFinancialReport() {
   if (!financialReportContainer) return;
 
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
-  const cash = myPlayer ? myPlayer.cash : 0;
+  const cash = getDisplayCash(myPlayer, currentRoom?.current_round, lastAcknowledgedSalesRound, propertySales);
   const myProperties = gameProperties.filter((gp) => gp.owner_user_id === currentUser?.id);
 
   // Build one line item per owned property
@@ -2440,6 +2443,14 @@ function checkTurnStartSalesModal() {
 
   // Mark as acknowledged immediately so subsequent re-renders during this turn do not re-trigger
   lastAcknowledgedSalesRound = currentRoom.current_round;
+
+  // Immediately reflect the credited balance at the start of the turn
+  if (myPlayer && myWalletDisplay) {
+    myWalletDisplay.textContent = formatMoney(myPlayer.cash);
+  }
+  if (currentGameSubpage === 'financial-report') {
+    renderFinancialReport();
+  }
 
   const count = mySales.length;
   modalSalesTitle.textContent = count === 1 ? '🎉 Property Sold!' : `🎉 ${count} Properties Sold!`;

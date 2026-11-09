@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "wrangler dev",
-    "test": "node test-flipstimate.mjs && node test-leaderboard.mjs && node test-delinquency.mjs && node test-foreclosure-alert.mjs && node test-sales-modal-attribution.mjs && node test-resign.mjs && node test-workflow.mjs",
+    "test": "node test-flipstimate.mjs && node test-leaderboard.mjs && node test-delinquency.mjs && node test-foreclosure-alert.mjs && node test-sales-modal-attribution.mjs && node test-wallet-sync.mjs && node test-resign.mjs && node test-workflow.mjs",
     "test:mobile": "node test-mobile-widths.mjs",
     "deploy": "wrangler deploy"
   },
