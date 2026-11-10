@@ -100,6 +100,20 @@ export async function fetchRoom(roomId) {
 }
 
 /**
+ * Lightweight fetch of room turn and status for polling heartbeat.
+ */
+export async function fetchRoomTurnState(roomId) {
+  const { data, error } = await supabase
+    .from('rooms')
+    .select('id, current_turn_seat, current_round, status, updated_at')
+    .eq('id', roomId)
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
+/**
  * Toggle the ready status for the current user.
  */
 export async function toggleReady(roomId) {
@@ -258,7 +272,7 @@ export async function resignGame(roomId) {
 /**
  * Subscribe to realtime table changes for players, room state, game properties, and sales.
  */
-export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropertiesChange, onSalesChange) {
+export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropertiesChange, onSalesChange, onStatusChange) {
   const channel = supabase.channel(`room:${roomId}`)
     .on(
       'postgres_changes',
@@ -320,7 +334,9 @@ export function subscribeToRoom(roomId, onPlayersChange, onRoomChange, onPropert
         onSalesChange && onSalesChange(payload);
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      onStatusChange && onStatusChange(status);
+    });
 
   return () => {
     supabase.removeChannel(channel);

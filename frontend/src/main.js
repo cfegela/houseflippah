@@ -16,6 +16,7 @@ import {
   makeMortgagePayment,
   endTurn,
   fetchGameData,
+  fetchRoomTurnState,
 } from './supabase.js';
 
 // Application State
@@ -34,6 +35,9 @@ let selectedPropertySlug = null;
 let unsubscribeRealtime = null;
 let currentSubscribedRoomId = null;
 let lastKnownTurnKey = null;
+let gamePollInterval = null;
+let lobbyPollInterval = null;
+let isSyncingGame = false;
 
 // Audio Alert System (Web Audio API)
 let audioCtx = null;
@@ -570,6 +574,115 @@ function renderSeats() {
   }
 }
 
+function stopPolling() {
+  if (gamePollInterval) {
+    clearInterval(gamePollInterval);
+    gamePollInterval = null;
+  }
+  if (lobbyPollInterval) {
+    clearInterval(lobbyPollInterval);
+    lobbyPollInterval = null;
+  }
+}
+
+function startGamePolling(roomId) {
+  stopPolling();
+  if (!roomId) return;
+  gamePollInterval = setInterval(async () => {
+    if (!currentRoom || currentRoom.status !== 'in_progress' || currentRoom.id !== roomId) return;
+    try {
+      const latestRoom = await fetchRoomTurnState(roomId);
+      if (!latestRoom) return;
+
+      if (
+        latestRoom.status !== currentRoom.status ||
+        latestRoom.current_turn_seat !== currentRoom.current_turn_seat ||
+        latestRoom.current_round !== currentRoom.current_round
+      ) {
+        await syncActiveGameData(roomId);
+      }
+    } catch (err) {
+      // Ignore transient polling errors
+    }
+  }, 2000);
+}
+
+function startLobbyPolling(roomId) {
+  stopPolling();
+  if (!roomId) return;
+  lobbyPollInterval = setInterval(async () => {
+    if (!currentRoom || currentRoom.status !== 'waiting' || currentRoom.id !== roomId) return;
+    try {
+      const { room: latestRoom, players: latestPlayers } = await fetchRoom(roomId);
+      if (!latestRoom) return;
+      if (latestRoom.status === 'in_progress') {
+        stopPolling();
+        await loadAndShowGameView();
+      } else if (latestRoom.status === 'abandoned') {
+        stopPolling();
+        showLandingView();
+      } else if (latestPlayers && latestPlayers.length !== currentPlayers.length) {
+        currentPlayers = latestPlayers;
+        renderSeats();
+      }
+    } catch (err) {
+      // Ignore transient polling errors
+    }
+  }, 2500);
+}
+
+async function syncActiveGameData(roomId) {
+  if (isSyncingGame) return;
+  isSyncingGame = true;
+  try {
+    const data = await fetchGameData(roomId);
+    if (!data || !data.room) return;
+
+    if (data.room.status === 'abandoned') {
+      stopPolling();
+      showLandingView();
+      return;
+    }
+    if (data.room.status === 'completed') {
+      stopPolling();
+      currentRoom = data.room;
+      currentPlayers = data.players;
+      gameProperties = data.gameProperties;
+      propertySales = data.propertySales || [];
+      propertyForeclosures = data.propertyForeclosures || [];
+      showGameOverModal();
+      return;
+    }
+
+    currentRoom = data.room;
+    currentPlayers = data.players;
+    catalogProperties = data.catalog;
+    gameProperties = data.gameProperties;
+    propertySales = data.propertySales || [];
+    propertyForeclosures = data.propertyForeclosures || [];
+
+    if (currentRoom.status === 'in_progress') {
+      renderGameHUD();
+      renderProperties();
+      if (currentGameSubpage === 'make-payments') renderMortgagePayments();
+      if (currentGameSubpage === 'financial-report') renderFinancialReport();
+      if (currentGameSubpage === 'market-report') renderMarketReport();
+      if (currentGameSubpage === 'sell-properties') renderSellProperties();
+      if (currentGameSubpage === 'make-improvements') {
+        renderMakeImprovements();
+        if (pendingImproveProperty) renderImproveModalContent();
+      }
+      if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
+    } else {
+      renderSeats();
+    }
+  } catch (err) {
+    console.warn('Game sync failed:', err);
+  } finally {
+    isSyncingGame = false;
+  }
+}
+
 // Switch to Lobby View
 function showLobbyView(room, players) {
   currentRoom = room;
@@ -583,10 +696,12 @@ function showLobbyView(room, players) {
   setRoomUrl(room.id);
   renderSeats();
   setupRealtimeSubscription(room.id);
+  startLobbyPolling(room.id);
 }
 
 // Switch to Landing View
 function showLandingView() {
+  stopPolling();
   if (unsubscribeRealtime) {
     unsubscribeRealtime();
     unsubscribeRealtime = null;
@@ -738,6 +853,7 @@ async function loadAndShowGameView() {
     renderProperties();
     showGameSubpage(currentGameSubpage || 'dashboard');
     setupRealtimeSubscription(currentRoom.id);
+    startGamePolling(currentRoom.id);
   } catch (err) {
     showAlert('Failed to load game: ' + err.message);
   }
@@ -2425,94 +2541,64 @@ function setupRealtimeSubscription(roomId) {
   unsubscribeRealtime = subscribeToRoom(
     roomId,
     async () => {
-      try {
-        const { room: latestRoom, players: updatedPlayers, gameProperties: updatedProps, propertySales: updatedSales, propertyForeclosures: updatedForeclosures } = await fetchGameData(roomId);
-        if (latestRoom.status === 'abandoned') {
-          showLandingView();
-          return;
-        }
-        if (latestRoom.status === 'completed') {
-          currentRoom = latestRoom;
-          currentPlayers = updatedPlayers;
-          gameProperties = updatedProps;
-          propertySales = updatedSales || [];
-          propertyForeclosures = updatedForeclosures || [];
-          showGameOverModal();
-          return;
-        }
-        currentRoom = latestRoom;
-        currentPlayers = updatedPlayers;
-        gameProperties = updatedProps;
-        propertySales = updatedSales || [];
-        propertyForeclosures = updatedForeclosures || [];
-        if (currentRoom.status === 'in_progress') {
-          renderGameHUD();
-          renderProperties();
-          if (currentGameSubpage === 'make-payments') renderMortgagePayments();
-          if (currentGameSubpage === 'financial-report') renderFinancialReport();
-          if (currentGameSubpage === 'market-report') renderMarketReport();
-          if (currentGameSubpage === 'sell-properties') renderSellProperties();
-          if (currentGameSubpage === 'make-improvements') {
-            renderMakeImprovements();
-            if (pendingImproveProperty) renderImproveModalContent();
+      // Room players change
+      if (currentRoom?.status === 'in_progress') {
+        await syncActiveGameData(roomId);
+      } else {
+        try {
+          const { players } = await fetchRoom(roomId);
+          if (players) {
+            currentPlayers = players;
+            renderSeats();
           }
-          if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
-        } else {
-          renderSeats();
-        }
-      } catch (err) {
-        showLandingView();
+        } catch (err) {}
       }
     },
     async (roomChange) => {
       if (roomChange.new) {
-        currentRoom = roomChange.new;
-        if (currentRoom.status === 'in_progress') {
-          await loadAndShowGameView();
-        } else if (currentRoom.status === 'abandoned') {
+        if (roomChange.new.status === 'in_progress') {
+          if (!gameView || gameView.classList.contains('hidden')) {
+            await loadAndShowGameView();
+          } else {
+            currentRoom = roomChange.new;
+            await syncActiveGameData(roomId);
+          }
+        } else if (roomChange.new.status === 'abandoned') {
+          stopPolling();
           showLandingView();
-        } else if (currentRoom.status === 'completed') {
+        } else if (roomChange.new.status === 'completed') {
+          stopPolling();
+          currentRoom = roomChange.new;
           showGameOverModal();
         }
       }
     },
     async () => {
-      // Game property ownership changes
-      try {
-        const { gameProperties: updatedProps, players: updatedPlayers, propertySales: updatedSales, propertyForeclosures: updatedForeclosures } = await fetchGameData(roomId);
-        gameProperties = updatedProps;
-        currentPlayers = updatedPlayers;
-        propertySales = updatedSales || [];
-        propertyForeclosures = updatedForeclosures || [];
-        renderGameHUD();
-        renderProperties();
-        if (currentGameSubpage === 'make-payments') renderMortgagePayments();
-        if (currentGameSubpage === 'financial-report') renderFinancialReport();
-        if (currentGameSubpage === 'market-report') renderMarketReport();
-        if (currentGameSubpage === 'sell-properties') renderSellProperties();
-        if (currentGameSubpage === 'make-improvements') {
-          renderMakeImprovements();
-          if (pendingImproveProperty) renderImproveModalContent();
-        }
-        if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
-      } catch (err) {
-        console.error('Error refreshing properties:', err);
+      // Game property ownership/improvements/listings change
+      if (currentRoom?.status === 'in_progress') {
+        await syncActiveGameData(roomId);
       }
     },
     async () => {
       // Property sales & foreclosures updates
-      try {
-        const { propertySales: updatedSales, propertyForeclosures: updatedForeclosures, players: updatedPlayers, gameProperties: updatedProps } = await fetchGameData(roomId);
-        propertySales = updatedSales || [];
-        propertyForeclosures = updatedForeclosures || [];
-        currentPlayers = updatedPlayers;
-        gameProperties = updatedProps;
-        renderGameHUD();
-        renderProperties();
-        if (currentGameSubpage === 'market-report') renderMarketReport();
-        if (currentGameSubpage === 'financial-report') renderFinancialReport();
-      } catch (err) {
-        console.error('Error refreshing sales and foreclosures:', err);
+      if (currentRoom?.status === 'in_progress') {
+        await syncActiveGameData(roomId);
+      }
+    },
+    async (status) => {
+      // Realtime channel status change (SUBSCRIBED, etc.)
+      if (status === 'SUBSCRIBED' && currentRoom?.id === roomId) {
+        if (currentRoom.status === 'in_progress') {
+          await syncActiveGameData(roomId);
+        } else if (currentRoom.status === 'waiting') {
+          try {
+            const { players } = await fetchRoom(roomId);
+            if (players) {
+              currentPlayers = players;
+              renderSeats();
+            }
+          } catch (err) {}
+        }
       }
     }
   );
@@ -2674,19 +2760,12 @@ btnEndTurn.addEventListener('click', async () => {
   unlockAudio();
   btnEndTurn.disabled = true;
   try {
-    await endTurn(currentRoom.id);
-    const { room, players, gameProperties: updatedProps, propertySales: updatedSales } = await fetchGameData(currentRoom.id);
-    currentRoom = room;
-    currentPlayers = players;
-    gameProperties = updatedProps;
-    propertySales = updatedSales || [];
-
-    renderGameHUD();
-    renderProperties();
-    if (currentGameSubpage === 'sell-properties') renderSellProperties();
-    if (currentGameSubpage === 'make-payments') renderMortgagePayments();
-    if (currentGameSubpage === 'financial-report') renderFinancialReport();
-    if (currentGameSubpage === 'market-report') renderMarketReport();
+    const endTurnResult = await endTurn(currentRoom.id);
+    if (endTurnResult?.room) {
+      currentRoom = endTurnResult.room;
+      renderGameHUD();
+    }
+    await syncActiveGameData(currentRoom.id);
   } catch (err) {
     showAlert(err.message || 'Failed to end turn.');
     btnEndTurn.disabled = false;
@@ -2710,6 +2789,7 @@ function closeResignModal() {
 }
 
 function showGameOverModal() {
+  stopPolling();
   if (!gameOverModal) return;
   const winner = currentPlayers[0];
   const isWinner = winner?.user_id === currentUser?.id;
@@ -2890,6 +2970,32 @@ if (cardNavFinancialReport) {
 document.querySelectorAll('.btn-back-to-dashboard').forEach((btn) => {
   btn.addEventListener('click', () => showGameSubpage('dashboard'));
 });
+
+// --- Foreground Visibility & Focus Synchronization ---
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && currentRoom?.id) {
+      if (currentRoom.status === 'in_progress') {
+        syncActiveGameData(currentRoom.id);
+      } else if (currentRoom.status === 'waiting') {
+        fetchRoom(currentRoom.id).then(({ room, players }) => {
+          if (room?.status === 'in_progress') {
+            loadAndShowGameView();
+          } else if (players) {
+            currentPlayers = players;
+            renderSeats();
+          }
+        }).catch(() => {});
+      }
+    }
+  });
+
+  window.addEventListener('focus', () => {
+    if (currentRoom?.id && currentRoom.status === 'in_progress') {
+      syncActiveGameData(currentRoom.id);
+    }
+  });
+}
 
 // --- App Initialization ---
 async function init() {
