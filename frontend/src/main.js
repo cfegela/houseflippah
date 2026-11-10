@@ -872,9 +872,9 @@ function renderGameHUD() {
   }
 
   if (activePlayer) {
-    turnPlayerDisplay.textContent = `Seat ${activeSeat}: ${activePlayer.display_name}`;
+    turnPlayerDisplay.textContent = activePlayer.display_name;
   } else {
-    turnPlayerDisplay.textContent = `Seat ${activeSeat}`;
+    turnPlayerDisplay.textContent = 'Player';
   }
 
   if (isMyTurn) {
