@@ -318,6 +318,7 @@ const btnStartGame = document.getElementById('btn-start-game');
 
 // DOM Elements - Game HUD & Marketplace
 const turnIndicatorBox = document.getElementById('turn-indicator-box');
+const turnBadgeLabel = document.getElementById('turn-badge-label');
 const roundNumberDisplay = document.getElementById('round-number-display');
 const turnPlayerDisplay = document.getElementById('turn-player-display');
 const myWalletDisplay = document.getElementById('my-wallet-display');
@@ -862,35 +863,52 @@ async function loadAndShowGameView() {
 // Render HUD (Turn indicator, wallet balance, scoreboard)
 function renderGameHUD() {
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  const isResigned = !!(myPlayer && myPlayer.is_resigned);
   const activeSeat = currentRoom.current_turn_seat || 1;
   const activePlayer = currentPlayers.find((p) => p.seat_number === activeSeat);
-  const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
+  const isMyTurn = !isResigned && myPlayer && myPlayer.seat_number === activeSeat;
 
   // Turn & Round Indicator Box
-  if (roundNumberDisplay && currentRoom) {
-    roundNumberDisplay.textContent = currentRoom.current_round || 1;
-  }
-
-  if (activePlayer) {
-    turnPlayerDisplay.textContent = activePlayer.display_name;
-  } else {
-    turnPlayerDisplay.textContent = 'Player';
-  }
-
-  if (isMyTurn) {
-    turnIndicatorBox.classList.add('is-my-turn');
-    btnEndTurn.disabled = false;
-    btnEndTurn.title = 'Pass turn to next player';
-
-    const currentTurnKey = `${currentRoom.current_round || 1}:${activeSeat}`;
-    if (lastKnownTurnKey !== currentTurnKey) {
-      lastKnownTurnKey = currentTurnKey;
-      playTurnChime();
+  if (isResigned) {
+    if (turnBadgeLabel) {
+      turnBadgeLabel.textContent = 'Resigned';
     }
-  } else {
+    if (turnPlayerDisplay && myPlayer) {
+      turnPlayerDisplay.textContent = myPlayer.display_name;
+    }
     turnIndicatorBox.classList.remove('is-my-turn');
+    turnIndicatorBox.classList.add('is-resigned');
     btnEndTurn.disabled = true;
-    btnEndTurn.title = 'Wait your turn';
+    btnEndTurn.title = 'You have resigned';
+  } else {
+    turnIndicatorBox.classList.remove('is-resigned');
+    if (turnBadgeLabel) {
+      turnBadgeLabel.innerHTML = `Round <span id="round-number-display">${currentRoom.current_round || 1}</span>`;
+    } else if (roundNumberDisplay && currentRoom) {
+      roundNumberDisplay.textContent = currentRoom.current_round || 1;
+    }
+
+    if (activePlayer) {
+      turnPlayerDisplay.textContent = activePlayer.display_name;
+    } else {
+      turnPlayerDisplay.textContent = 'Player';
+    }
+
+    if (isMyTurn) {
+      turnIndicatorBox.classList.add('is-my-turn');
+      btnEndTurn.disabled = false;
+      btnEndTurn.title = 'Pass turn to next player';
+
+      const currentTurnKey = `${currentRoom.current_round || 1}:${activeSeat}`;
+      if (lastKnownTurnKey !== currentTurnKey) {
+        lastKnownTurnKey = currentTurnKey;
+        playTurnChime();
+      }
+    } else {
+      turnIndicatorBox.classList.remove('is-my-turn');
+      btnEndTurn.disabled = true;
+      btnEndTurn.title = 'Wait your turn';
+    }
   }
 
   // Wallet (if present)
@@ -898,16 +916,23 @@ function renderGameHUD() {
     myWalletDisplay.textContent = formatMoney(myPlayer.cash);
   }
 
-  // Resign Game control (available to all players during active game)
+  // Resign Game control (available to all players during active game; grayed out if resigned)
   if (btnResignGame) {
     if (currentRoom?.status === 'in_progress') {
       btnResignGame.classList.remove('hidden');
+      if (isResigned) {
+        btnResignGame.disabled = true;
+        btnResignGame.title = 'You have resigned from this game';
+      } else {
+        btnResignGame.disabled = false;
+        btnResignGame.title = 'Resign from game';
+      }
     } else {
       btnResignGame.classList.add('hidden');
     }
   }
 
-  // Host Controls
+  // Host Controls (Option B: Host retains End Game button even as a viewer)
   if (myPlayer?.is_host) {
     btnGameEnd.classList.remove('hidden');
   } else {
@@ -1037,8 +1062,9 @@ function renderPropertyDetails(slug) {
   const ownerPlayer = isBankOwned ? null : currentPlayers.find((p) => p.user_id === ownerId);
 
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+  const isResigned = !!(myPlayer && myPlayer.is_resigned);
   const activeSeat = currentRoom.current_turn_seat || 1;
-  const isMyTurn = myPlayer && myPlayer.seat_number === activeSeat;
+  const isMyTurn = !isResigned && myPlayer && myPlayer.seat_number === activeSeat;
 
   const totalCost = prop.cost;
   const purchasePrice = gp?.purchase_price || totalCost;
@@ -1067,7 +1093,13 @@ function renderPropertyDetails(slug) {
   }
 
   let actionHtml = '';
-  if (isBankOwned) {
+  if (isResigned) {
+    actionHtml = `
+      <button class="btn-detail-buy" disabled title="You have resigned and are viewing this match">
+        Resigned (Viewer)
+      </button>
+    `;
+  } else if (isBankOwned) {
     if (isMyTurn) {
       if (hasPurchasedThisRound) {
         actionHtml = `
@@ -2791,7 +2823,7 @@ function closeResignModal() {
 function showGameOverModal() {
   stopPolling();
   if (!gameOverModal) return;
-  const winner = currentPlayers[0];
+  const winner = currentPlayers.find((p) => !p.is_resigned) || currentPlayers[0];
   const isWinner = winner?.user_id === currentUser?.id;
 
   if (modalGameOverTitle) {
@@ -2899,13 +2931,13 @@ if (btnConfirmResignGame) {
     closeResignModal();
     try {
       await resignGame(wasRoomId);
+      await syncActiveGameData(wasRoomId);
     } catch (err) {
       console.error('Error resigning game:', err);
       showAlert(err.message || 'Failed to resign game.');
     } finally {
       btnConfirmResignGame.disabled = false;
     }
-    showLandingView();
   });
 }
 

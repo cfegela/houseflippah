@@ -128,9 +128,10 @@
       <!-- Resign Game Confirmation Modal -->
       <div id="resign-game-modal" class="modal-overlay hidden">
         <div class="modal-card" style="text-align: center;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🏳️</div>
           <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: #f59e0b;">Resign Game?</h3>
           <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;">
-            Are you sure you want to resign? You will forfeit your properties back to the bank and exit the match.
+            Are you sure you want to resign? You will forfeit your properties back to the bank and remain in the game as a viewer.
           </p>
           <div class="actions-row modal-actions-row">
             <button id="btn-cancel-resign-game" class="btn btn-secondary">
@@ -389,7 +390,7 @@
           <div class="card game-hud">
             <div class="hud-top-row">
               <div class="turn-indicator-box" id="turn-indicator-box">
-                <span class="hud-label">Round <span id="round-number-display">1</span></span>
+                <span class="hud-label" id="turn-badge-label">Round <span id="round-number-display">1</span></span>
                 <div class="turn-player-name" id="turn-player-display">Loading...</div>
               </div>
 
