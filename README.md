@@ -13,14 +13,14 @@ Welcome to **houseflippah**, a turn-based real estate investing and flipping gam
 * **Players**: 1 to 4 players per room.
 * **Starting Bankroll**: Each player begins the game with **$100,000 in cash**.
 * **Turn Order**: Gameplay proceeds sequentially by seat number (Seat 1, Seat 2, etc.).
-* **Rounds**: A round concludes once every player has completed their turn. The game then advances to the next round.
+* **Rounds**: A round concludes once every active player has completed their turn. The game then advances to the next round.
 
 
 
 ## 2. Buying Properties
 
 * **Bank-Owned Properties**: 28 properties are initially available in the public catalog.
-* **Financing (10% Down)**: Properties are purchased with a **10% cash down payment**. Then 40 payments of 1/40th the purchase price (effectively a simple 10% interest rate)
+* **Financing (10% Down)**: Properties are purchased with a **10% cash down payment**. Then 40 payments of 1/40th the purchase price (effectively a simple 10% interest rate).
 * **Purchase Limit**: You can only purchase **1 property per round**.
 * **Round 1 Mortgage Waiver**: The mortgage payment for the round in which a property is purchased is automatically covered.
 
@@ -97,6 +97,31 @@ At the conclusion of each round, an automated pool of outside buyers evaluates a
   * Net profits are credited directly to the player's cash on hand.
   * Sold properties are archived to the transaction ledger and permanently retired from circulation.
 
-## 7. Winning the Game
 
-Play strategically to balance mortgage obligations, reinvest cash into high-yield renovations, and time the market to flip your real estate portfolio for maximum net worth!
+
+## 7. Round-Start Events & Alerts
+
+At the start of every new round, all players receive simultaneous pop-up alerts before any turn begins:
+* **Market Sales Report**: Detailed confirmation of all property sales completed by automated buyers at round close (seller, buyer name, sale price, mortgage payoff, and net proceeds).
+* **Delinquency Warnings**: Alerts players who missed a mortgage payment during the previous round and are at risk of foreclosure.
+* **Foreclosure Notices**: Alerts any player whose property was seized and returned to the bank due to consecutive missed mortgage payments.
+
+
+
+## 8. Player Resignation & Viewer Mode
+
+Any player can choose to resign from an active game at any time:
+* **Resignation Confirmation**: Players are prompted with a confirmation dialog before forfeiting.
+* **Property Forfeiture**: All properties owned by the resigning player immediately return to the bank-owned pool (mortgages wiped clean, improvements preserved).
+* **Viewer Mode**: Resigned players remain in the match as spectators. The "Resign Game" button is disabled, the HUD turn badge displays **Resigned**, and the player can observe ongoing market activity and reports.
+* **Turn Skipping**: Resigned players are permanently skipped during all subsequent turn rotations.
+* **Host Resignation**: If the room host resigns, they retain their host privileges and the "End Game" button in viewer mode.
+* **Sole Survivor Victory**: In multiplayer games, when all opponents have resigned and exactly 1 active player remains, the match automatically concludes with a victory for the sole survivor.
+
+
+
+## 9. Winning the Game & Total Equity
+
+* **Total Equity Calculation**: A player's financial standing and net worth are measured in **Total Equity**:
+  $$\text{Total Equity} = \text{Cash on Hand} + \sum (\text{Market Value of Owned Properties}) - \sum (\text{Mortgage Balances})$$
+* **Leaderboards & Victory**: Players can review real-time equity rankings in the Financial Report. When the match concludes—either through a sole survivor victory or when the host ends the game—the final victory screen highlights the winner's total equity, remaining cash, and real estate portfolio.
