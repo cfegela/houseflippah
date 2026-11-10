@@ -356,7 +356,7 @@ const IMPROVEMENTS_CATALOG = [
 export { MARKET_TEMPERATURE_ODDS, calculateFlipstimate } from './odds.js';
 import { calculateFlipstimate } from './odds.js';
 export { calculatePlayerEquity, getLeaderboardData } from './leaderboard.js';
-import { getLeaderboardData } from './leaderboard.js';
+import { calculatePlayerEquity, getLeaderboardData } from './leaderboard.js';
 export { getDelinquentProperties } from './delinquency.js';
 import { getDelinquentProperties } from './delinquency.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
@@ -648,9 +648,11 @@ async function syncActiveGameData(roomId) {
       stopPolling();
       currentRoom = data.room;
       currentPlayers = data.players;
+      catalogProperties = data.catalog || catalogProperties;
       gameProperties = data.gameProperties;
       propertySales = data.propertySales || [];
       propertyForeclosures = data.propertyForeclosures || [];
+      renderGameHUD();
       showGameOverModal();
       return;
     }
@@ -862,6 +864,22 @@ async function loadAndShowGameView() {
 
 // Render HUD (Turn indicator, wallet balance, scoreboard)
 function renderGameHUD() {
+  if (currentRoom?.status === 'completed' || currentRoom?.status === 'abandoned') {
+    if (turnIndicatorBox) turnIndicatorBox.classList.remove('is-my-turn');
+    if (btnEndTurn) {
+      btnEndTurn.disabled = true;
+      btnEndTurn.title = 'Game is completed';
+    }
+    if (btnResignGame) {
+      btnResignGame.disabled = true;
+      btnResignGame.classList.add('hidden');
+    }
+    if (btnGameEnd) {
+      btnGameEnd.classList.add('hidden');
+    }
+    return;
+  }
+
   const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
   const isResigned = !!(myPlayer && myPlayer.is_resigned);
   const activeSeat = currentRoom.current_turn_seat || 1;
@@ -2601,7 +2619,7 @@ function setupRealtimeSubscription(roomId) {
         } else if (roomChange.new.status === 'completed') {
           stopPolling();
           currentRoom = roomChange.new;
-          showGameOverModal();
+          await syncActiveGameData(roomId);
         }
       }
     },
@@ -2788,7 +2806,7 @@ btnStartGame.addEventListener('click', async () => {
 
 // Gameplay HUD Actions
 btnEndTurn.addEventListener('click', async () => {
-  if (!currentRoom) return;
+  if (!currentRoom || currentRoom.status !== 'in_progress') return;
   unlockAudio();
   btnEndTurn.disabled = true;
   try {
@@ -2836,26 +2854,43 @@ function showGameOverModal() {
   }
 
   if (modalGameOverStats && winner) {
-    const equity = calculatePlayerEquity(winner, gameProperties, catalogProperties);
-    const ownedProps = gameProperties.filter((gp) => gp.owner_user_id === winner.user_id && !gp.is_sold_to_buyer);
-    modalGameOverStats.innerHTML = `
-      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-        <span style="color: var(--text-muted); font-size: 0.9rem;">Winner:</span>
-        <span style="font-weight: 700; color: #f59e0b;">${escapeHtml(winner.display_name)} (Seat ${winner.seat_number})</span>
-      </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-        <span style="color: var(--text-muted); font-size: 0.9rem;">Final Cash:</span>
-        <span style="font-weight: 700; color: #38bdf8;">${formatMoney(winner.cash)}</span>
-      </div>
-      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-        <span style="color: var(--text-muted); font-size: 0.9rem;">Properties Owned:</span>
-        <span style="font-weight: 700;">${ownedProps.length}</span>
-      </div>
-      <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 0.5rem;">
-        <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">Total Equity:</span>
-        <span style="font-weight: 800; color: #22c55e; font-size: 1.1rem;">${formatMoney(equity)}</span>
-      </div>
-    `;
+    try {
+      const equity = calculatePlayerEquity(winner, gameProperties, catalogProperties);
+      const ownedProps = (gameProperties || []).filter((gp) => gp.owner_user_id === winner.user_id && !gp.is_sold_to_buyer);
+      modalGameOverStats.innerHTML = `
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <span style="color: var(--text-muted); font-size: 0.9rem;">Winner:</span>
+          <span style="font-weight: 700; color: #f59e0b;">${escapeHtml(winner.display_name)} (Seat ${winner.seat_number})</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <span style="color: var(--text-muted); font-size: 0.9rem;">Final Cash:</span>
+          <span style="font-weight: 700; color: #38bdf8;">${formatMoney(winner.cash)}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+          <span style="color: var(--text-muted); font-size: 0.9rem;">Properties Owned:</span>
+          <span style="font-weight: 700;">${ownedProps.length}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 0.5rem;">
+          <span style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">Total Equity:</span>
+          <span style="font-weight: 800; color: #22c55e; font-size: 1.1rem;">${formatMoney(equity)}</span>
+        </div>
+      `;
+    } catch (err) {
+      console.warn('Failed to render game over stats:', err);
+    }
+  }
+
+  // Lock and disable HUD buttons
+  if (btnEndTurn) {
+    btnEndTurn.disabled = true;
+    btnEndTurn.title = 'Game is completed';
+  }
+  if (btnResignGame) {
+    btnResignGame.disabled = true;
+    btnResignGame.classList.add('hidden');
+  }
+  if (turnIndicatorBox) {
+    turnIndicatorBox.classList.remove('is-my-turn');
   }
 
   gameOverModal.classList.remove('hidden');
@@ -2923,9 +2958,11 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+let isResigning = false;
 if (btnConfirmResignGame) {
   btnConfirmResignGame.addEventListener('click', async () => {
-    if (!currentRoom) return;
+    if (isResigning || !currentRoom) return;
+    isResigning = true;
     const wasRoomId = currentRoom.id;
     btnConfirmResignGame.disabled = true;
     closeResignModal();
@@ -2937,6 +2974,7 @@ if (btnConfirmResignGame) {
       showAlert(err.message || 'Failed to resign game.');
     } finally {
       btnConfirmResignGame.disabled = false;
+      isResigning = false;
     }
   });
 }

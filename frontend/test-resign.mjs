@@ -112,11 +112,14 @@ async function runResignTests() {
     throw new Error('Expected buy_property to fail for resigned player, but it succeeded');
   }
 
-  const { error: blockDoubleResignErr } = await p2.client.rpc('resign_game', {
+  const { data: doubleResignRes, error: doubleResignErr } = await p2.client.rpc('resign_game', {
     p_room_id: roomId,
   });
-  if (!blockDoubleResignErr) {
-    throw new Error('Expected double resign_game to fail, but it succeeded');
+  if (doubleResignErr) {
+    throw new Error(`Expected idempotent resign_game to succeed without error, but got: ${doubleResignErr.message}`);
+  }
+  if (!doubleResignRes.already_resigned) {
+    throw new Error(`Expected already_resigned = true, got: ${JSON.stringify(doubleResignRes)}`);
   }
 
   console.log('   ✓ Player 2 resignation kept Player 2 as viewer (is_resigned=true), surrendered property, and completed game with Player 1 as sole winner.');
