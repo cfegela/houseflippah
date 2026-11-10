@@ -88,8 +88,8 @@ At the conclusion of each round, an automated pool of outside buyers evaluates a
 
 * **Pricing vs. Market Value**:
   * Listing **at market value** sells at the effective base odds (market temperature base odds + improvement bonus).
-  * Listing **below market value** **increases** the odds of selling proportional to the discount (e.g. pricing 20% below market value boosts sale odds by 20%, up to a maximum of 100%).
-  * Listing **above market value** **decreases** the odds of selling proportional to the markup (e.g. pricing 20% above market value reduces sale odds by 20%).
+  * Listing **below market value** **increases** the odds of selling proportional to the discount.
+  * Listing **above market value** **decreases** the odds of selling proportional to the markup.
 
 * **Sales Settlement**:
   * When a property sells, the automated buyer pays the full asking price.
