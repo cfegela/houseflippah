@@ -50,6 +50,7 @@ Properties can be improved to increase their overall market value:
 ## 4. Mortgages, Delinquency & Foreclosure
 
 * **Mortgage Payments**: Starting the round following purchase, each owned property requires a mortgage payment equal to **1/40th of its original purchase price**.
+* **Mortgage Balance & 10% Simple Interest Simulation**: The initial mortgage balance equals the **full purchase price**. With a 10% cash down payment plus 40 payments of 1/40th (2.5%), this simulates a 10% simple interest rate (e.g. for Vermont Avenue at $100,000, the buyer pays $10,000 down and owes $100,000 on the mortgage, payable in 40 payments of $2,500 for $110,000 total paid).
   * **Mortgage Pre-Check Warning**: If you click **Make Payments** and own zero properties, an alert modal warns that *"You do not have any active mortgage payments due"*, keeping you on the current screen.
 * **Delinquency**:
   * If a player fails to make the mortgage payment during a round, the property becomes **delinquent** (1 missed payment).

@@ -15,8 +15,8 @@ const p1 = { user_id: 'u1', display_name: 'Alice', seat_number: 1, cash: 100000 
 assert.equal(calculatePlayerEquity(p1, [], mockCatalog), 100000);
 console.log('   ✓ Player with $100k cash and no properties has $100,000 equity.');
 
-// 2. Purchased Property (10% down, 90% mortgage) preserves initial equity
-console.log('2. Testing property purchase retains equity ($6k down + $6k property equity = $100k)...');
+// 2. Purchased Property (10% down, full mortgage)
+console.log('2. Testing property purchase with full mortgage ($6k down + $60k mortgage owed)...');
 const p1Bought = { user_id: 'u1', display_name: 'Alice', seat_number: 1, cash: 94000 };
 const propsP1 = [
   {
@@ -24,29 +24,29 @@ const propsP1 = [
     owner_user_id: 'u1',
     purchase_price: 60000,
     market_value: 60000,
-    mortgage_balance: 54000
+    mortgage_balance: 60000
   }
 ];
-// Cash: 94,000 + (60,000 - 54,000) = 94,000 + 6,000 = 100,000
-assert.equal(calculatePlayerEquity(p1Bought, propsP1, mockCatalog), 100000);
-console.log('   ✓ Purchased property preserves exactly $100,000 total equity.');
+// Cash: 94,000 + (60,000 - 60,000) = 94,000 + 0 = 94,000
+assert.equal(calculatePlayerEquity(p1Bought, propsP1, mockCatalog), 94000);
+console.log('   ✓ Purchased property with full mortgage correctly reflects $94,000 total equity.');
 
 // 3. Property Improvement increases Market Value & boosts Total Equity
 console.log('3. Testing property renovation boosts equity...');
-// Player spent $6,000 cash on renovation (cash: 88,000), market value increased by $12,000 (market_value: 72,000)
-const p1Improved = { user_id: 'u1', display_name: 'Alice', seat_number: 1, cash: 88000 };
+// Player spent $12,000 cash on 2 renovations (cash: 82,000), market value increased by $24,000 (market_value: 84,000)
+const p1Improved = { user_id: 'u1', display_name: 'Alice', seat_number: 1, cash: 82000 };
 const propsP1Improved = [
   {
     property_slug: 'mediterranean_avenue',
     owner_user_id: 'u1',
     purchase_price: 60000,
-    market_value: 72000,
-    mortgage_balance: 54000
+    market_value: 84000,
+    mortgage_balance: 60000
   }
 ];
-// Cash: 88,000 + (72,000 - 54,000) = 88,000 + 18,000 = 106,000
+// Cash: 82,000 + (84,000 - 60,000) = 82,000 + 24,000 = 106,000
 assert.equal(calculatePlayerEquity(p1Improved, propsP1Improved, mockCatalog), 106000);
-console.log('   ✓ Renovation net gain increases total equity from $100k to $106k.');
+console.log('   ✓ Renovation net gain increases total equity to $106k.');
 
 // 4. Leaderboard Ranking
 console.log('4. Testing leaderboard ranking by total equity...');

@@ -141,10 +141,10 @@ async function runTest() {
     throw new Error('Purchase price, market value, or improvements on purchase not properly initialized');
   }
   console.log(`   ✓ Purchase price ($60,000) & initial Market Value ($60,000) verified on deed.`);
-  if (buyData.property.mortgage_balance !== 54000) {
-    throw new Error(`Expected $54,000 initial mortgage balance (price - 10% down), got ${buyData.property.mortgage_balance}`);
+  if (buyData.property.mortgage_balance !== 60000) {
+    throw new Error(`Expected $60,000 initial mortgage balance (full purchase price), got ${buyData.property.mortgage_balance}`);
   }
-  console.log('   ✓ Initial mortgage balance ($54,000 = $60,000 price - $6,000 down) verified.');
+  console.log('   ✓ Initial mortgage balance ($60,000 = full purchase price) verified.');
 
   // Enforce Rule 2: Cannot buy a second property in the same round
   const { error: secondBuyErr } = await p1.client.rpc('buy_property', {
@@ -213,10 +213,10 @@ async function runTest() {
   if (payData.paid_amount !== 1500) throw new Error(`Expected $1,500 payment, got ${payData.paid_amount}`);
   if (payData.player.cash !== 92500) throw new Error(`Expected $92,500 cash, got ${payData.player.cash}`);
   console.log(`   ✓ Player 1 made 1/40th mortgage payment ($1,500)! Remaining cash: $${payData.player.cash}.`);
-  if (payData.property.mortgage_balance !== 52500) {
-    throw new Error(`Expected mortgage balance $52,500 after first payment, got ${payData.property.mortgage_balance}`);
+  if (payData.property.mortgage_balance !== 58500) {
+    throw new Error(`Expected mortgage balance $58,500 after first payment, got ${payData.property.mortgage_balance}`);
   }
-  console.log('   ✓ Mortgage balance reduced by payment ($54,000 -> $52,500).');
+  console.log('   ✓ Mortgage balance reduced by payment ($60,000 -> $58,500).');
 
   // Test Make Improvements in Round 2:
   // Mediterranean purchase_price = $60,000. Cost = $6,000 (10%), Boost = $12,000 (20%).
@@ -464,10 +464,10 @@ async function runTest() {
     throw new Error('Expected bought-back property to retain "windows_doors" improvement');
   }
   console.log('   ✓ Player 1 bought foreclosed Oriental Ave at base price ($100,000) with improvements & $120,000 market value intact!');
-  if (buyBackData.property.mortgage_balance !== 90000) {
-    throw new Error(`Expected new mortgage balance $90,000 on buy-back, got ${buyBackData.property.mortgage_balance}`);
+  if (buyBackData.property.mortgage_balance !== 100000) {
+    throw new Error(`Expected new mortgage balance $100,000 on buy-back, got ${buyBackData.property.mortgage_balance}`);
   }
-  console.log('   ✓ Bought-back property carries a fresh $90,000 mortgage balance.');
+  console.log('   ✓ Bought-back property carries a fresh $100,000 mortgage balance.');
 
   // 7c. Testing Automated Buyer Pool & Sales Settlement
   console.log('7c. Testing Automated Buyer Pool & Property Sales...');
