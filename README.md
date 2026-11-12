@@ -63,7 +63,7 @@ Properties can be improved to increase their overall market value:
 ## 5. Listing & Selling Properties
 
 * **Improvement Required**: You **cannot list an unimproved property**. At least one improvement must be completed before listing.
-  * **Listing Pre-Check Warning**: If you click **Sell Properties** and have no properties that can be listed (e.g. you own zero properties or all owned properties have 0 improvements), an alert modal warns that properties must have at least 1 improvement in order to be listed, keeping you on the current screen. If any property is actively listed, access to Sell Properties is permitted to view or delist it.
+  * **Listing Pre-Check Warning**: If you click **Sell Properties** and have no properties that can be listed (e.g. you own zero properties or all owned properties have 0 improvements), an alert modal warns that *"You must own a property with at least 1 improvement to create a listing"*, keeping you on the current screen. If any property is actively listed, access to Sell Properties is permitted to view or delist it.
 * **No Same-Round Listing**: You cannot list a property in the same round it was purchased.
 * **No Same-Round Improve & List**: You cannot list a property in the same round improvements were made to it.
 * **Minimum Asking Price**: Your list price must be at least equal to the property's remaining mortgage balance.
