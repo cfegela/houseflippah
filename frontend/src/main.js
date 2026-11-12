@@ -554,10 +554,7 @@ function renderSeats() {
       seatEl.innerHTML = `
         <div class="seat-header">
           <span>Seat ${seatNum}</span>
-          <div style="display: flex; gap: 0.25rem;">
-            ${player.is_host ? '<span class="badge badge-host">Host</span>' : ''}
-            ${isYou ? '<span class="badge badge-you">You</span>' : ''}
-          </div>
+          ${player.is_host ? '<span class="badge badge-host">Host</span>' : ''}
         </div>
         <div class="seat-name">${escapeHtml(player.display_name)}</div>
         <div class="status-indicator status-ready">
