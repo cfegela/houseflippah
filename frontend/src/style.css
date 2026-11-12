@@ -1733,11 +1733,21 @@ input[type="number"] {
   width: 100%;
 }
 
+.game-bottom-bar .btn {
+  min-width: 130px;
+  justify-content: center;
+  text-align: center;
+}
+
 @media (min-width: 640px) {
   .game-bottom-bar {
     margin-top: 2.5rem;
     margin-bottom: 2.5rem;
     gap: 1rem;
+  }
+
+  .game-bottom-bar .btn {
+    min-width: 140px;
   }
 }
 

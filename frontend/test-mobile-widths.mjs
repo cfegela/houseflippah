@@ -112,6 +112,10 @@ async function run() {
 
     await wait(500);
 
+    await send('Runtime.evaluate', {
+      expression: `window.hideAllModals = () => document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));`
+    });
+
     // Evaluate viewport measurements across different views
     const testCases = [
       {
@@ -554,15 +558,15 @@ async function run() {
             }
           }
 
-          // Check if any visible .modal-actions-row, .property-detail-actions, or .actions-delinquent-row has stacked buttons
+          // Check if any visible .modal-actions-row, .property-detail-actions, .actions-delinquent-row, or .game-bottom-bar has stacked buttons
           const actionRows = [];
-          for (const row of document.querySelectorAll('.modal-actions-row, .property-detail-actions, .actions-delinquent-row')) {
-            const btns = Array.from(row.querySelectorAll('button'));
+          for (const row of document.querySelectorAll('.modal-actions-row, .property-detail-actions, .actions-delinquent-row, .game-bottom-bar')) {
+            const btns = Array.from(row.querySelectorAll('button')).filter(b => b.offsetParent !== null && !b.classList.contains('hidden'));
             if (btns.length >= 2) {
               const r0 = btns[0].getBoundingClientRect();
               const r1 = btns[1].getBoundingClientRect();
               const isSideBySide = Math.abs(r0.top - r1.top) < 8;
-              actionRows.push({ selector: row.className, isSideBySide, b0Top: r0.top, b1Top: r1.top, w0: r0.width, w1: r1.width });
+              actionRows.push({ selector: row.className, isSideBySide, b0Top: r0.top, b1Top: r1.top, w0: r0.width, w1: r1.width, h0: r0.height, h1: r1.height });
             }
           }
 
