@@ -50,6 +50,7 @@ Properties can be improved to increase their overall market value:
 ## 4. Mortgages, Delinquency & Foreclosure
 
 * **Mortgage Payments**: Starting the round following purchase, each owned property requires a mortgage payment equal to **1/40th of its original purchase price**.
+  * **Mortgage Pre-Check Warning**: If you click **Make Payments** and own zero properties, an alert modal warns that *"You do not have any active mortgage payments due"*, keeping you on the current screen.
 * **Delinquency**:
   * If a player fails to make the mortgage payment during a round, the property becomes **delinquent** (1 missed payment).
   * Delinquent properties can be brought current by making a double payment (or kept afloat by making a single payment).

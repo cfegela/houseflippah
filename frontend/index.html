@@ -377,6 +377,21 @@
         </div>
       </div>
 
+      <!-- Make Payments Warning Modal -->
+      <div id="payment-warning-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="text-align: center; max-width: 440px;">
+          <h3 style="font-size: 1.3rem; margin-bottom: 0.5rem; color: #f59e0b;" id="payment-warning-modal-title">No Mortgages to Pay</h3>
+          <p style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem;" id="payment-warning-modal-msg">
+            You do not have any active mortgage payments due.
+          </p>
+          <div class="actions-row">
+            <button id="btn-close-payment-warning-modal" class="btn btn-primary" style="width: 100%; padding: 0.8rem; font-size: 1rem; font-weight: 700;">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- VIEW 2: GAME LOBBY -->
       <main id="lobby-view" class="hidden">
         <div class="card">

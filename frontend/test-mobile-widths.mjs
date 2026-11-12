@@ -538,6 +538,13 @@ async function run() {
         `
       },
       {
+        name: 'Make Payments Warning Modal',
+        setupJs: `
+          hideAllModals();
+          document.getElementById('payment-warning-modal').classList.remove('hidden');
+        `
+      },
+      {
         name: 'Game Bottom Bar (Home + End Game Buttons on Subpage)',
         setupJs: `
           hideAllModals();

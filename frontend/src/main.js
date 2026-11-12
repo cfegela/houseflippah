@@ -363,6 +363,8 @@ export { canListAnyProperties } from './listing.js';
 import { canListAnyProperties } from './listing.js';
 export { canImproveAnyProperties } from './improvements.js';
 import { canImproveAnyProperties } from './improvements.js';
+export { hasPayableMortgages } from './mortgages.js';
+import { hasPayableMortgages } from './mortgages.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -460,6 +462,10 @@ const btnCloseSellWarningModal = document.getElementById('btn-close-sell-warning
 // DOM Elements - Make Improvements Warning Modal
 const improveWarningModal = document.getElementById('improve-warning-modal');
 const btnCloseImproveWarningModal = document.getElementById('btn-close-improve-warning-modal');
+
+// DOM Elements - Make Payments Warning Modal
+const paymentWarningModal = document.getElementById('payment-warning-modal');
+const btnClosePaymentWarningModal = document.getElementById('btn-close-payment-warning-modal');
 
 // Helpers
 function formatMoney(amount) {
@@ -741,6 +747,7 @@ function showLandingView() {
   closeGameOverModal();
   closeSellWarningModal();
   closeImproveWarningModal();
+  closePaymentWarningModal();
 
   if (cardNavResignGame) cardNavResignGame.classList.add('hidden');
   if (btnBottomHome) btnBottomHome.classList.add('hidden');
@@ -763,6 +770,10 @@ function showGameSubpage(subpage, placeholderInfo = null) {
   }
   if (subpage === 'make-improvements' && !canImproveAnyProperties(currentUser?.id, gameProperties, currentRoom?.current_round || 1)) {
     openImproveWarningModal();
+    return;
+  }
+  if (subpage === 'make-payments' && !hasPayableMortgages(currentUser?.id, gameProperties)) {
+    openPaymentWarningModal();
     return;
   }
   currentGameSubpage = subpage;
@@ -2891,6 +2902,14 @@ function closeImproveWarningModal() {
   if (improveWarningModal) improveWarningModal.classList.add('hidden');
 }
 
+function openPaymentWarningModal() {
+  if (paymentWarningModal) paymentWarningModal.classList.remove('hidden');
+}
+
+function closePaymentWarningModal() {
+  if (paymentWarningModal) paymentWarningModal.classList.add('hidden');
+}
+
 function showGameOverModal() {
   stopPolling();
   if (!gameOverModal) return;
@@ -2982,6 +3001,16 @@ if (btnCloseImproveWarningModal) {
 if (improveWarningModal) {
   improveWarningModal.addEventListener('click', (e) => {
     if (e.target === improveWarningModal) closeImproveWarningModal();
+  });
+}
+
+if (btnClosePaymentWarningModal) {
+  btnClosePaymentWarningModal.addEventListener('click', closePaymentWarningModal);
+}
+
+if (paymentWarningModal) {
+  paymentWarningModal.addEventListener('click', (e) => {
+    if (e.target === paymentWarningModal) closePaymentWarningModal();
   });
 }
 
@@ -3102,7 +3131,13 @@ if (cardNavMakeImprovements) {
 }
 
 if (cardNavMakePayments) {
-  cardNavMakePayments.addEventListener('click', () => showGameSubpage('make-payments'));
+  cardNavMakePayments.addEventListener('click', () => {
+    if (!hasPayableMortgages(currentUser?.id, gameProperties)) {
+      openPaymentWarningModal();
+      return;
+    }
+    showGameSubpage('make-payments');
+  });
   cardNavMakePayments.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') cardNavMakePayments.click();
   });
