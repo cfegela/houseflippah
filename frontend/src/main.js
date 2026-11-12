@@ -323,6 +323,7 @@ const roundNumberDisplay = document.getElementById('round-number-display');
 const turnPlayerDisplay = document.getElementById('turn-player-display');
 const myWalletDisplay = document.getElementById('my-wallet-display');
 const btnEndTurn = document.getElementById('btn-end-turn');
+const btnBottomHome = document.getElementById('btn-bottom-home');
 const btnGameEnd = document.getElementById('btn-game-end');
 const propertiesGrid = document.getElementById('properties-grid');
 
@@ -728,6 +729,7 @@ function showLandingView() {
   closeGameOverModal();
 
   if (cardNavResignGame) cardNavResignGame.classList.add('hidden');
+  if (btnBottomHome) btnBottomHome.classList.add('hidden');
   if (btnGameEnd) btnGameEnd.classList.add('hidden');
 
   document.getElementById('app').classList.remove('in-lobby');
@@ -743,6 +745,10 @@ function showLandingView() {
 function showGameSubpage(subpage, placeholderInfo = null) {
   currentGameSubpage = subpage;
   if (!gameDashboardView || !gameBuyPropertiesView || !gamePlaceholderView || !gameMakePaymentsView) return;
+
+  if (btnBottomHome) {
+    btnBottomHome.classList.toggle('hidden', subpage === 'dashboard');
+  }
 
   // The Financial Report and Market Report are visible only on their own subpages
   if (gameFinancialReportView) gameFinancialReportView.classList.toggle('hidden', subpage !== 'financial-report');

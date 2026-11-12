@@ -520,12 +520,13 @@ async function run() {
         `
       },
       {
-        name: 'Game Bottom Bar (End Game Button)',
+        name: 'Game Bottom Bar (Home + End Game Buttons on Subpage)',
         setupJs: `
           hideAllModals();
           document.getElementById('landing-view').classList.add('hidden');
           document.getElementById('lobby-view').classList.add('hidden');
           document.getElementById('game-view').classList.remove('hidden');
+          document.getElementById('btn-bottom-home').classList.remove('hidden');
           document.getElementById('btn-game-end').classList.remove('hidden');
         `
       }
