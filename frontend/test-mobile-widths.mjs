@@ -531,6 +531,13 @@ async function run() {
         `
       },
       {
+        name: 'Make Improvements Warning Modal',
+        setupJs: `
+          hideAllModals();
+          document.getElementById('improve-warning-modal').classList.remove('hidden');
+        `
+      },
+      {
         name: 'Game Bottom Bar (Home + End Game Buttons on Subpage)',
         setupJs: `
           hideAllModals();

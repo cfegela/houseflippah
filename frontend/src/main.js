@@ -361,6 +361,8 @@ export { getDelinquentProperties } from './delinquency.js';
 import { getDelinquentProperties } from './delinquency.js';
 export { canListAnyProperties } from './listing.js';
 import { canListAnyProperties } from './listing.js';
+export { canImproveAnyProperties } from './improvements.js';
+import { canImproveAnyProperties } from './improvements.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -454,6 +456,10 @@ const btnCloseForeclosureModal = document.getElementById('btn-close-foreclosure-
 // DOM Elements - Sell Properties Warning Modal
 const sellWarningModal = document.getElementById('sell-warning-modal');
 const btnCloseSellWarningModal = document.getElementById('btn-close-sell-warning-modal');
+
+// DOM Elements - Make Improvements Warning Modal
+const improveWarningModal = document.getElementById('improve-warning-modal');
+const btnCloseImproveWarningModal = document.getElementById('btn-close-improve-warning-modal');
 
 // Helpers
 function formatMoney(amount) {
@@ -734,6 +740,7 @@ function showLandingView() {
   closeResignModal();
   closeGameOverModal();
   closeSellWarningModal();
+  closeImproveWarningModal();
 
   if (cardNavResignGame) cardNavResignGame.classList.add('hidden');
   if (btnBottomHome) btnBottomHome.classList.add('hidden');
@@ -752,6 +759,10 @@ function showLandingView() {
 function showGameSubpage(subpage, placeholderInfo = null) {
   if (subpage === 'sell-properties' && !canListAnyProperties(currentUser?.id, gameProperties)) {
     openSellWarningModal();
+    return;
+  }
+  if (subpage === 'make-improvements' && !canImproveAnyProperties(currentUser?.id, gameProperties, currentRoom?.current_round || 1)) {
+    openImproveWarningModal();
     return;
   }
   currentGameSubpage = subpage;
@@ -2872,6 +2883,14 @@ function closeSellWarningModal() {
   if (sellWarningModal) sellWarningModal.classList.add('hidden');
 }
 
+function openImproveWarningModal() {
+  if (improveWarningModal) improveWarningModal.classList.remove('hidden');
+}
+
+function closeImproveWarningModal() {
+  if (improveWarningModal) improveWarningModal.classList.add('hidden');
+}
+
 function showGameOverModal() {
   stopPolling();
   if (!gameOverModal) return;
@@ -2953,6 +2972,16 @@ if (btnCloseSellWarningModal) {
 if (sellWarningModal) {
   sellWarningModal.addEventListener('click', (e) => {
     if (e.target === sellWarningModal) closeSellWarningModal();
+  });
+}
+
+if (btnCloseImproveWarningModal) {
+  btnCloseImproveWarningModal.addEventListener('click', closeImproveWarningModal);
+}
+
+if (improveWarningModal) {
+  improveWarningModal.addEventListener('click', (e) => {
+    if (e.target === improveWarningModal) closeImproveWarningModal();
   });
 }
 
@@ -3060,7 +3089,13 @@ if (cardNavSellProperties) {
 }
 
 if (cardNavMakeImprovements) {
-  cardNavMakeImprovements.addEventListener('click', () => showGameSubpage('make-improvements'));
+  cardNavMakeImprovements.addEventListener('click', () => {
+    if (!canImproveAnyProperties(currentUser?.id, gameProperties, currentRoom?.current_round || 1)) {
+      openImproveWarningModal();
+      return;
+    }
+    showGameSubpage('make-improvements');
+  });
   cardNavMakeImprovements.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') cardNavMakeImprovements.click();
   });
