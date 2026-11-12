@@ -520,13 +520,12 @@ async function run() {
         `
       },
       {
-        name: 'Game Bottom Bar (Resign Game + End Game Buttons)',
+        name: 'Game Bottom Bar (End Game Button)',
         setupJs: `
           hideAllModals();
           document.getElementById('landing-view').classList.add('hidden');
           document.getElementById('lobby-view').classList.add('hidden');
           document.getElementById('game-view').classList.remove('hidden');
-          document.getElementById('btn-resign-game').classList.remove('hidden');
           document.getElementById('btn-game-end').classList.remove('hidden');
         `
       }

@@ -323,7 +323,6 @@ const roundNumberDisplay = document.getElementById('round-number-display');
 const turnPlayerDisplay = document.getElementById('turn-player-display');
 const myWalletDisplay = document.getElementById('my-wallet-display');
 const btnEndTurn = document.getElementById('btn-end-turn');
-const btnResignGame = document.getElementById('btn-resign-game');
 const btnGameEnd = document.getElementById('btn-game-end');
 const propertiesGrid = document.getElementById('properties-grid');
 
@@ -371,6 +370,7 @@ const cardNavMakeImprovements = document.getElementById('card-nav-make-improveme
 const cardNavMakePayments = document.getElementById('card-nav-make-payments');
 const cardNavMarketReport = document.getElementById('card-nav-market-report');
 const cardNavFinancialReport = document.getElementById('card-nav-financial-report');
+const cardNavResignGame = document.getElementById('card-nav-resign-game');
 
 // DOM Elements - End Game Modal
 const endGameModal = document.getElementById('end-game-modal');
@@ -727,7 +727,7 @@ function showLandingView() {
   closeResignModal();
   closeGameOverModal();
 
-  if (btnResignGame) btnResignGame.classList.add('hidden');
+  if (cardNavResignGame) cardNavResignGame.classList.add('hidden');
   if (btnGameEnd) btnGameEnd.classList.add('hidden');
 
   document.getElementById('app').classList.remove('in-lobby');
@@ -870,9 +870,10 @@ function renderGameHUD() {
       btnEndTurn.disabled = true;
       btnEndTurn.title = 'Game is completed';
     }
-    if (btnResignGame) {
-      btnResignGame.disabled = true;
-      btnResignGame.classList.add('hidden');
+    if (cardNavResignGame) {
+      cardNavResignGame.classList.add('disabled');
+      cardNavResignGame.setAttribute('aria-disabled', 'true');
+      cardNavResignGame.title = 'Game is completed';
     }
     if (btnGameEnd) {
       btnGameEnd.classList.add('hidden');
@@ -934,19 +935,27 @@ function renderGameHUD() {
     myWalletDisplay.textContent = formatMoney(myPlayer.cash);
   }
 
-  // Resign Game control (available to all players during active game; grayed out if resigned)
-  if (btnResignGame) {
+  // Resign Game tile card (available to all players during active game; grayed out if resigned)
+  if (cardNavResignGame) {
     if (currentRoom?.status === 'in_progress') {
-      btnResignGame.classList.remove('hidden');
+      cardNavResignGame.classList.remove('hidden');
+      const titleEl = cardNavResignGame.querySelector('.dashboard-card-title');
+      const descEl = cardNavResignGame.querySelector('.dashboard-card-desc');
       if (isResigned) {
-        btnResignGame.disabled = true;
-        btnResignGame.title = 'You have resigned from this game';
+        cardNavResignGame.classList.add('disabled');
+        cardNavResignGame.setAttribute('aria-disabled', 'true');
+        cardNavResignGame.title = 'You have resigned and are viewing this match';
+        if (titleEl) titleEl.textContent = 'Resigned';
+        if (descEl) descEl.textContent = 'You have resigned and are viewing this match.';
       } else {
-        btnResignGame.disabled = false;
-        btnResignGame.title = 'Resign from game';
+        cardNavResignGame.classList.remove('disabled');
+        cardNavResignGame.removeAttribute('aria-disabled');
+        cardNavResignGame.title = 'Resign from game';
+        if (titleEl) titleEl.textContent = 'Resign Game';
+        if (descEl) descEl.textContent = 'Forfeit your properties and remain in the game as a viewer.';
       }
     } else {
-      btnResignGame.classList.add('hidden');
+      cardNavResignGame.classList.add('hidden');
     }
   }
 
@@ -2885,9 +2894,10 @@ function showGameOverModal() {
     btnEndTurn.disabled = true;
     btnEndTurn.title = 'Game is completed';
   }
-  if (btnResignGame) {
-    btnResignGame.disabled = true;
-    btnResignGame.classList.add('hidden');
+  if (cardNavResignGame) {
+    cardNavResignGame.classList.add('disabled');
+    cardNavResignGame.setAttribute('aria-disabled', 'true');
+    cardNavResignGame.title = 'Game is completed';
   }
   if (turnIndicatorBox) {
     turnIndicatorBox.classList.remove('is-my-turn');
@@ -2903,7 +2913,6 @@ function closeGameOverModal() {
 btnGameEnd.addEventListener('click', openEndGameModal);
 btnCancelEndGame.addEventListener('click', closeEndGameModal);
 
-if (btnResignGame) btnResignGame.addEventListener('click', openResignModal);
 if (btnCancelResignGame) btnCancelResignGame.addEventListener('click', closeResignModal);
 
 if (resignGameModal) {
@@ -3034,6 +3043,21 @@ if (cardNavFinancialReport) {
   cardNavFinancialReport.addEventListener('click', () => showGameSubpage('financial-report'));
   cardNavFinancialReport.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') showGameSubpage('financial-report');
+  });
+}
+
+if (cardNavResignGame) {
+  cardNavResignGame.addEventListener('click', () => {
+    const myPlayer = currentPlayers.find((p) => p.user_id === currentUser?.id);
+    if (myPlayer && myPlayer.is_resigned) return;
+    if (currentRoom?.status !== 'in_progress') return;
+    openResignModal();
+  });
+  cardNavResignGame.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      cardNavResignGame.click();
+    }
   });
 }
 

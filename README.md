@@ -113,7 +113,7 @@ At the start of every new round, all players receive simultaneous pop-up alerts 
 Any player can choose to resign from an active game at any time:
 * **Resignation Confirmation**: Players are prompted with a confirmation dialog before forfeiting.
 * **Property Forfeiture**: All properties owned by the resigning player immediately return to the bank-owned pool (mortgages wiped clean, improvements preserved).
-* **Viewer Mode**: Resigned players remain in the match as spectators. The "Resign Game" button is disabled, the HUD turn badge displays **Resigned**, and the player can observe ongoing market activity and reports.
+* **Viewer Mode**: Resigned players remain in the match as spectators. The "Resign Game" card is disabled, the HUD turn badge displays **Resigned**, and the player can observe ongoing market activity and reports.
 * **Turn Skipping**: Resigned players are permanently skipped during all subsequent turn rotations.
 * **Host Resignation**: If the room host resigns, they retain their host privileges and the "End Game" button in viewer mode.
 * **Sole Survivor Victory**: In multiplayer games, when all opponents have resigned and exactly 1 active player remains, the match automatically concludes with a victory for the sole survivor.
