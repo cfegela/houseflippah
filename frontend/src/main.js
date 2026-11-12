@@ -359,6 +359,8 @@ export { calculatePlayerEquity, getLeaderboardData } from './leaderboard.js';
 import { calculatePlayerEquity, getLeaderboardData } from './leaderboard.js';
 export { getDelinquentProperties } from './delinquency.js';
 import { getDelinquentProperties } from './delinquency.js';
+export { canListAnyProperties } from './listing.js';
+import { canListAnyProperties } from './listing.js';
 const gamePlaceholderView = document.getElementById('game-placeholder-view');
 const placeholderHeaderTitle = document.getElementById('placeholder-header-title');
 const placeholderIcon = document.getElementById('placeholder-icon');
@@ -448,6 +450,10 @@ const modalForeclosureTitle = document.getElementById('modal-foreclosure-title')
 const modalForeclosureSubtitle = document.getElementById('modal-foreclosure-subtitle');
 const modalForeclosureContent = document.getElementById('modal-foreclosure-content');
 const btnCloseForeclosureModal = document.getElementById('btn-close-foreclosure-modal');
+
+// DOM Elements - Sell Properties Warning Modal
+const sellWarningModal = document.getElementById('sell-warning-modal');
+const btnCloseSellWarningModal = document.getElementById('btn-close-sell-warning-modal');
 
 // Helpers
 function formatMoney(amount) {
@@ -727,6 +733,7 @@ function showLandingView() {
   closeEndGameModal();
   closeResignModal();
   closeGameOverModal();
+  closeSellWarningModal();
 
   if (cardNavResignGame) cardNavResignGame.classList.add('hidden');
   if (btnBottomHome) btnBottomHome.classList.add('hidden');
@@ -743,6 +750,10 @@ function showLandingView() {
 
 // Game Subpage Navigation
 function showGameSubpage(subpage, placeholderInfo = null) {
+  if (subpage === 'sell-properties' && !canListAnyProperties(currentUser?.id, gameProperties)) {
+    openSellWarningModal();
+    return;
+  }
   currentGameSubpage = subpage;
   if (!gameDashboardView || !gameBuyPropertiesView || !gamePlaceholderView || !gameMakePaymentsView) return;
 
@@ -2853,6 +2864,14 @@ function closeResignModal() {
   if (resignGameModal) resignGameModal.classList.add('hidden');
 }
 
+function openSellWarningModal() {
+  if (sellWarningModal) sellWarningModal.classList.remove('hidden');
+}
+
+function closeSellWarningModal() {
+  if (sellWarningModal) sellWarningModal.classList.add('hidden');
+}
+
 function showGameOverModal() {
   stopPolling();
   if (!gameOverModal) return;
@@ -2924,6 +2943,16 @@ if (btnCancelResignGame) btnCancelResignGame.addEventListener('click', closeResi
 if (resignGameModal) {
   resignGameModal.addEventListener('click', (e) => {
     if (e.target === resignGameModal) closeResignModal();
+  });
+}
+
+if (btnCloseSellWarningModal) {
+  btnCloseSellWarningModal.addEventListener('click', closeSellWarningModal);
+}
+
+if (sellWarningModal) {
+  sellWarningModal.addEventListener('click', (e) => {
+    if (e.target === sellWarningModal) closeSellWarningModal();
   });
 }
 
@@ -3018,7 +3047,13 @@ if (cardNavBuyProperties) {
 }
 
 if (cardNavSellProperties) {
-  cardNavSellProperties.addEventListener('click', () => showGameSubpage('sell-properties'));
+  cardNavSellProperties.addEventListener('click', () => {
+    if (!canListAnyProperties(currentUser?.id, gameProperties)) {
+      openSellWarningModal();
+      return;
+    }
+    showGameSubpage('sell-properties');
+  });
   cardNavSellProperties.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') cardNavSellProperties.click();
   });

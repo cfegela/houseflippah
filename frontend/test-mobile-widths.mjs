@@ -524,6 +524,13 @@ async function run() {
         `
       },
       {
+        name: 'Sell Properties Unimproved Warning Modal',
+        setupJs: `
+          hideAllModals();
+          document.getElementById('sell-warning-modal').classList.remove('hidden');
+        `
+      },
+      {
         name: 'Game Bottom Bar (Home + End Game Buttons on Subpage)',
         setupJs: `
           hideAllModals();
