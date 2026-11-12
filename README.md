@@ -42,7 +42,7 @@ Properties can be improved to increase their overall market value:
   * Each specific improvement can only be installed once per property.
 * **Timing & Holding Restrictions**:
   * **No Same-Round Improvement**: You cannot make improvements to a property in the same round it was purchased (must hold for at least 1 round).
-    * **Improvement Pre-Check Warning**: If you click **Make Improvements** and have no properties that can currently be improved (e.g. you own no properties, all owned properties were purchased in the current round, or are already listed/max upgraded), an alert modal warns that *"You must have owned a property for at least 1 round to make improvements"*, keeping you on the current screen.
+    * **Improvement Pre-Check Warning**: If you click **Make Improvements** and have no properties that can currently be improved (e.g. you own no properties, all owned properties were purchased in the current round, or are already listed/max upgraded), an alert modal warns that *"You must have an unlisted property owned for at least 1 round to make improvements"*, keeping you on the current screen.
   * **No Listed Improvements**: You cannot improve a property that is currently listed for sale, nor can you improve a property in the same round it was delisted.
 
 
