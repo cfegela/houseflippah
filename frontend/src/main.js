@@ -38,6 +38,7 @@ let lastKnownTurnKey = null;
 let gamePollInterval = null;
 let lobbyPollInterval = null;
 let isSyncingGame = false;
+let pendingSyncRoomId = null;
 
 // Audio Alert System (Web Audio API)
 let audioCtx = null;
@@ -649,51 +650,60 @@ function startLobbyPolling(roomId) {
 }
 
 async function syncActiveGameData(roomId) {
-  if (isSyncingGame) return;
+  if (isSyncingGame) {
+    pendingSyncRoomId = roomId;
+    return;
+  }
   isSyncingGame = true;
   try {
-    const data = await fetchGameData(roomId);
-    if (!data || !data.room) return;
+    let targetRoomId = roomId;
+    while (targetRoomId) {
+      pendingSyncRoomId = null;
+      const data = await fetchGameData(targetRoomId);
+      if (!data || !data.room) break;
 
-    if (data.room.status === 'abandoned') {
-      stopPolling();
-      showLandingView();
-      return;
-    }
-    if (data.room.status === 'completed') {
-      stopPolling();
+      if (data.room.status === 'abandoned') {
+        stopPolling();
+        showLandingView();
+        break;
+      }
+      if (data.room.status === 'completed') {
+        stopPolling();
+        currentRoom = data.room;
+        currentPlayers = data.players;
+        catalogProperties = data.catalog || catalogProperties;
+        gameProperties = data.gameProperties;
+        propertySales = data.propertySales || [];
+        propertyForeclosures = data.propertyForeclosures || [];
+        renderGameHUD();
+        showGameOverModal();
+        break;
+      }
+
       currentRoom = data.room;
       currentPlayers = data.players;
-      catalogProperties = data.catalog || catalogProperties;
+      catalogProperties = data.catalog;
       gameProperties = data.gameProperties;
       propertySales = data.propertySales || [];
       propertyForeclosures = data.propertyForeclosures || [];
-      renderGameHUD();
-      showGameOverModal();
-      return;
-    }
 
-    currentRoom = data.room;
-    currentPlayers = data.players;
-    catalogProperties = data.catalog;
-    gameProperties = data.gameProperties;
-    propertySales = data.propertySales || [];
-    propertyForeclosures = data.propertyForeclosures || [];
-
-    if (currentRoom.status === 'in_progress') {
-      renderGameHUD();
-      renderProperties();
-      if (currentGameSubpage === 'make-payments') renderMortgagePayments();
-      if (currentGameSubpage === 'financial-report') renderFinancialReport();
-      if (currentGameSubpage === 'market-report') renderMarketReport();
-      if (currentGameSubpage === 'sell-properties') renderSellProperties();
-      if (currentGameSubpage === 'make-improvements') {
-        renderMakeImprovements();
-        if (pendingImproveProperty) renderImproveModalContent();
+      if (currentRoom.status === 'in_progress') {
+        renderGameHUD();
+        renderProperties();
+        if (currentGameSubpage === 'make-payments') renderMortgagePayments();
+        if (currentGameSubpage === 'financial-report') renderFinancialReport();
+        if (currentGameSubpage === 'market-report') renderMarketReport();
+        if (currentGameSubpage === 'sell-properties') renderSellProperties();
+        if (currentGameSubpage === 'make-improvements') {
+          renderMakeImprovements();
+          if (pendingImproveProperty) renderImproveModalContent();
+        }
+        if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
+      } else {
+        renderSeats();
       }
-      if (currentGameSubpage === 'property-details' && selectedPropertySlug) renderPropertyDetails(selectedPropertySlug);
-    } else {
-      renderSeats();
+
+      targetRoomId = pendingSyncRoomId;
     }
   } catch (err) {
     console.warn('Game sync failed:', err);
@@ -1952,7 +1962,7 @@ function renderMortgagePayments() {
   const currentRound = currentRoom.current_round || 1;
 
   // Filter player's owned properties
-  const myProperties = gameProperties.filter((gp) => gp.owner_user_id === currentUser.id);
+  const myProperties = gameProperties.filter((gp) => gp.owner_user_id === currentUser.id && !gp.is_sold_to_buyer);
 
   if (myProperties.length === 0) {
     mortgagePaymentsContainer.innerHTML = `
@@ -2466,7 +2476,7 @@ function checkRoundStartDelinquencyModal() {
 
   if (lastAcknowledgedDelinquencyRound >= currentRoom.current_round) return false;
 
-  const myDelinquentProps = getDelinquentProperties(currentUser?.id, gameProperties, currentRoom.current_round);
+  const myDelinquentProps = getDelinquentProperties(currentUser?.id, gameProperties, currentRoom.current_round, propertySales);
 
   if (myDelinquentProps.length > 0) {
     lastAcknowledgedDelinquencyRound = currentRoom.current_round;
@@ -2655,7 +2665,6 @@ function setupRealtimeSubscription(roomId) {
           if (!gameView || gameView.classList.contains('hidden')) {
             await loadAndShowGameView();
           } else {
-            currentRoom = roomChange.new;
             await syncActiveGameData(roomId);
           }
         } else if (roomChange.new.status === 'abandoned') {
@@ -2663,7 +2672,6 @@ function setupRealtimeSubscription(roomId) {
           showLandingView();
         } else if (roomChange.new.status === 'completed') {
           stopPolling();
-          currentRoom = roomChange.new;
           await syncActiveGameData(roomId);
         }
       }
@@ -2855,11 +2863,7 @@ btnEndTurn.addEventListener('click', async () => {
   unlockAudio();
   btnEndTurn.disabled = true;
   try {
-    const endTurnResult = await endTurn(currentRoom.id);
-    if (endTurnResult?.room) {
-      currentRoom = endTurnResult.room;
-      renderGameHUD();
-    }
+    await endTurn(currentRoom.id);
     await syncActiveGameData(currentRoom.id);
   } catch (err) {
     showAlert(err.message || 'Failed to end turn.');

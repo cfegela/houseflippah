@@ -20,7 +20,7 @@ function checkRoundStartAlerts(userId, currentRoom, gameProperties, propertySale
 
   // 2. Delinquency Warning
   if (state.lastAcknowledgedDelinquencyRound < currentRoom.current_round) {
-    const myDelinquentProps = getDelinquentProperties(userId, gameProperties, currentRoom.current_round);
+    const myDelinquentProps = getDelinquentProperties(userId, gameProperties, currentRoom.current_round, propertySales);
     if (myDelinquentProps.length > 0) {
       state.lastAcknowledgedDelinquencyRound = currentRoom.current_round;
       alertsShown.push({ type: 'delinquency', items: myDelinquentProps });
@@ -106,5 +106,36 @@ if (daveAlerts.length !== 1 || daveAlerts[0].type !== 'delinquency') {
   throw new Error('Dave did not receive round-start delinquency alert!');
 }
 console.log('   ✓ Dave (Seat 4, not active turn) receives delinquency alert at Round 2 start.');
+
+// Test 5: Property sold to automated buyer during transition -> receives sales alert, NO delinquency alert
+console.log('\n5. Testing property sold during automated buying: receives sales alert, delinquency warning is NOT shown...');
+const round3Room = { current_round: 3, current_turn_seat: 1, status: 'in_progress' };
+const eveSoldProps = [
+  // In DB, property was sold and mortgage cleared
+  { owner_user_id: null, property_slug: 'connecticut-ave', missed_payments: 0, last_paid_round: 0, is_sold_to_buyer: true, mortgage_balance: 0 }
+];
+const eveSales = [
+  { buyer_type: 'automated', round_number: 2, seller_user_id: 'eve-seat-5', property_slug: 'connecticut-ave', net_proceeds: 50000 }
+];
+const eveState = { lastAcknowledgedForeclosureRound: 0, lastAcknowledgedDelinquencyRound: 0, lastAcknowledgedSalesRound: 0 };
+const eveAlerts = checkRoundStartAlerts('eve-seat-5', round3Room, eveSoldProps, eveSales, [], eveState);
+
+if (eveAlerts.length !== 1 || eveAlerts[0].type !== 'sales') {
+  throw new Error(`Eve should only receive sales alert! Got: ${JSON.stringify(eveAlerts)}`);
+}
+console.log('   ✓ Eve receives ONLY sales alert (delinquency warning completely suppressed for sold property).');
+
+// Test 6: Even if stale client state still had Eve as owner and missed payments, sales record & cleared mortgage suppress delinquency
+console.log('\n6. Testing stale client state with sales record: delinquency warning suppressed...');
+const eveStaleProps = [
+  { owner_user_id: 'eve-seat-5', property_slug: 'connecticut-ave', missed_payments: 1, last_paid_round: 1, mortgage_balance: 0 }
+];
+const eveState2 = { lastAcknowledgedForeclosureRound: 0, lastAcknowledgedDelinquencyRound: 0, lastAcknowledgedSalesRound: 0 };
+const eveAlerts2 = checkRoundStartAlerts('eve-seat-5', round3Room, eveStaleProps, eveSales, [], eveState2);
+
+if (eveAlerts2.length !== 1 || eveAlerts2[0].type !== 'sales') {
+  throw new Error(`Eve should only receive sales alert under stale state! Got: ${JSON.stringify(eveAlerts2)}`);
+}
+console.log('   ✓ Stale state with cleared mortgage and transition sales record safely suppresses delinquency warning.');
 
 console.log('\n🎉 ALL ROUND-START ALERT MODAL TESTS PASSED PERFECTLY!\n');

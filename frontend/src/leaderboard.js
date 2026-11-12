@@ -6,7 +6,7 @@ export function calculatePlayerEquity(player, gameProps = [], catalog = []) {
   if (!player) return 0;
   const cash = Number(player.cash || 0);
   const playerProps = Array.isArray(gameProps)
-    ? gameProps.filter((gp) => gp.owner_user_id === player.user_id)
+    ? gameProps.filter((gp) => gp.owner_user_id === player.user_id && !gp.is_sold_to_buyer)
     : [];
 
   const propertyEquity = playerProps.reduce((sum, gp) => {
